@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import StrategicAnalyzer from './components/StrategicAnalyzer'
 import OptimizationGuide from './components/OptimizationGuide'
+import SEOGuide from './components/SEOGuide'
 import './App.css'
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'analyzer' | 'guide'>('analyzer')
+  const [activeTab, setActiveTab] = useState<'analyzer' | 'guide' | 'seo'>('analyzer')
 
   return (
     <div className="app">
@@ -26,10 +27,18 @@ function App() {
         >
           📖 최적화 가이드
         </button>
+        <button
+          className={activeTab === 'seo' ? 'active' : ''}
+          onClick={() => setActiveTab('seo')}
+        >
+          🔍 SEO 가이드
+        </button>
       </nav>
 
       <main className="main-content">
-        {activeTab === 'analyzer' ? <StrategicAnalyzer /> : <OptimizationGuide />}
+        {activeTab === 'analyzer' && <StrategicAnalyzer />}
+        {activeTab === 'guide' && <OptimizationGuide />}
+        {activeTab === 'seo' && <SEOGuide />}
       </main>
 
       <footer className="footer">

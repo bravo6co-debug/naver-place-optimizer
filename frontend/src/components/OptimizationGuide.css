@@ -3,11 +3,61 @@
   margin-bottom: 10px;
 }
 
+.optimization-guide .description {
+  color: #666;
+  margin-bottom: 20px;
+}
+
 .loading {
   text-align: center;
   padding: 40px;
   color: #666;
   font-size: 1.2em;
+}
+
+/* 업종 선택 버튼 */
+.business-type-selector {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 30px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 12px;
+}
+
+.business-type-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 20px;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 90px;
+}
+
+.business-type-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.business-type-btn.active {
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.business-type-icon {
+  font-size: 1.8em;
+}
+
+.business-type-name {
+  font-size: 0.9em;
+  color: #333;
+  font-weight: 500;
 }
 
 .guide-container {
@@ -184,6 +234,23 @@
   .guide-menu-item:hover {
     transform: translateY(-2px);
   }
+
+  .business-type-selector {
+    justify-content: center;
+  }
+
+  .business-type-btn {
+    min-width: 80px;
+    padding: 10px 15px;
+  }
+
+  .business-type-icon {
+    font-size: 1.5em;
+  }
+
+  .business-type-name {
+    font-size: 0.85em;
+  }
 }
 
 @media (max-width: 640px) {
@@ -199,5 +266,24 @@
 
   .guide-menu-item {
     min-width: auto;
+  }
+
+  .business-type-selector {
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .business-type-btn {
+    min-width: 70px;
+    padding: 8px 12px;
+    gap: 4px;
+  }
+
+  .business-type-icon {
+    font-size: 1.3em;
+  }
+
+  .business-type-name {
+    font-size: 0.75em;
   }
 }

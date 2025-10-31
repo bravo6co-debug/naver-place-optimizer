@@ -43,6 +43,30 @@ interface StrategyPhase {
   keyword_traffic_breakdown: Record<string, number>
   difficulty_level: string
   cumulative_visitors: number
+  // V5 Simplified
+  receipt_review_target?: number
+  weekly_review_target?: number
+  consistency_importance?: string
+  receipt_review_keywords?: string[]
+  review_quality_standard?: {
+    min_text_length: number
+    min_photos: number
+    keyword_count: number
+    must_include_receipt_photo?: boolean
+  }
+  review_incentive_plan?: string
+  keyword_mention_strategy?: {
+    frequency: string
+    placement: string
+    natural_tip: string
+    example: string
+  }
+  info_trust_checklist?: string[]
+  review_templates?: {
+    short: string
+    medium: string
+    long: string
+  }
 }
 
 interface AnalysisResult {
@@ -569,6 +593,104 @@ function StrategicAnalyzer() {
                         </ul>
                       </div>
                     </div>
+
+                    {phase.receipt_review_target && phase.receipt_review_target > 0 && (
+                      <div className="receipt-review-strategy-v5">
+                        <h4>🎯 핵심 전략: 영수증 리뷰 + 키워드 (60%)</h4>
+
+                        <div className="review-targets">
+                          <div className="target-item">
+                            <span className="label">목표:</span>
+                            <span className="value primary">{phase.receipt_review_target}개</span>
+                          </div>
+                          <div className="target-item">
+                            <span className="label">주간 목표:</span>
+                            <span className="value secondary">{phase.weekly_review_target}개</span>
+                          </div>
+                        </div>
+
+                        {phase.consistency_importance && (
+                          <div className="consistency-warning">
+                            <span className="icon">⚠️</span>
+                            <span className="message">{phase.consistency_importance}</span>
+                          </div>
+                        )}
+
+                        {phase.receipt_review_keywords && phase.receipt_review_keywords.length > 0 && (
+                          <div className="review-keywords-section">
+                            <h5>✅ 삽입할 키워드 (우선순위):</h5>
+                            <div className="keyword-chips">
+                              {phase.receipt_review_keywords.map((kw, idx) => (
+                                <span key={idx} className={`keyword-chip priority-${idx + 1}`}>
+                                  {kw}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {phase.keyword_mention_strategy && (
+                          <div className="keyword-mention-guide">
+                            <h5>📝 키워드 삽입 방법:</h5>
+                            <ul>
+                              <li><strong>빈도:</strong> {phase.keyword_mention_strategy.frequency}</li>
+                              <li><strong>배치:</strong> {phase.keyword_mention_strategy.placement}</li>
+                              <li><strong>팁:</strong> {phase.keyword_mention_strategy.natural_tip}</li>
+                              <li><strong>예시:</strong> "{phase.keyword_mention_strategy.example}"</li>
+                            </ul>
+                          </div>
+                        )}
+
+                        {phase.review_quality_standard && (
+                          <div className="review-quality">
+                            <h5>✅ 리뷰 품질 기준 (AI 평가 통과):</h5>
+                            <ul>
+                              <li>텍스트: 최소 {phase.review_quality_standard.min_text_length}자</li>
+                              <li>사진: 최소 {phase.review_quality_standard.min_photos}장 (영수증 포함 필수)</li>
+                              <li>키워드: {phase.review_quality_standard.keyword_count}개 이상 자연스럽게</li>
+                            </ul>
+                          </div>
+                        )}
+
+                        {phase.review_incentive_plan && (
+                          <div className="review-incentive">
+                            <h5>🎁 리뷰 유도 이벤트:</h5>
+                            <p>{phase.review_incentive_plan}</p>
+                          </div>
+                        )}
+
+                        {phase.review_templates && (
+                          <div className="review-templates-v5">
+                            <h5>📄 영수증 리뷰 작성 예시 (키워드 삽입 버전):</h5>
+                            <div className="template-tabs">
+                              <div className="template-item">
+                                <div className="template-header">짧은 리뷰 (50자)</div>
+                                <pre className="template-content">{phase.review_templates.short}</pre>
+                              </div>
+                              <div className="template-item">
+                                <div className="template-header">중간 리뷰 (100자)</div>
+                                <pre className="template-content">{phase.review_templates.medium}</pre>
+                              </div>
+                              <div className="template-item highlight">
+                                <div className="template-header">긴 리뷰 (200자+, 추천)</div>
+                                <pre className="template-content">{phase.review_templates.long}</pre>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {phase.info_trust_checklist && phase.info_trust_checklist.length > 0 && (
+                      <div className="info-trust-strategy">
+                        <h4>📌 보조 전략: 정보 신뢰도 (30%)</h4>
+                        <ul>
+                          {phase.info_trust_checklist.map((item, idx) => (
+                            <li key={idx}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
 
                     {idx < result.strategy_roadmap.length - 1 && (
                       <div className="phase-arrow">⬇</div>

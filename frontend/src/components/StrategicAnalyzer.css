@@ -668,3 +668,259 @@
   font-size: 0.95em;
   opacity: 0.95;
 }
+
+/* ========== V5 영수증 리뷰 전략 섹션 ========== */
+.receipt-review-strategy-v5 {
+  margin-top: 25px;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  color: #ffffff;
+}
+
+.receipt-review-strategy-v5 h4 {
+  margin: 0 0 20px 0;
+  font-size: 1.3em;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.receipt-review-strategy-v5 h5 {
+  margin: 20px 0 12px 0;
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #fff;
+}
+
+.review-targets {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.review-targets .target-item {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.review-targets .label {
+  display: block;
+  font-size: 0.9em;
+  opacity: 0.9;
+  margin-bottom: 8px;
+}
+
+.review-targets .value {
+  display: block;
+  font-size: 2em;
+  font-weight: 700;
+}
+
+.review-targets .value.primary {
+  color: #ffd700;
+}
+
+.review-targets .value.secondary {
+  color: #90ee90;
+}
+
+.consistency-warning {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border-left: 4px solid #ffd700;
+}
+
+.consistency-warning .icon {
+  font-size: 1.5em;
+}
+
+.consistency-warning .message {
+  font-size: 1.05em;
+  font-weight: 500;
+}
+
+.review-keywords-section {
+  margin-bottom: 20px;
+}
+
+.keyword-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.keyword-chip {
+  background: rgba(255, 255, 255, 0.25);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.95em;
+  font-weight: 500;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.keyword-chip.priority-1 {
+  background: rgba(255, 215, 0, 0.3);
+  border-color: #ffd700;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+}
+
+.keyword-chip.priority-2 {
+  background: rgba(192, 192, 192, 0.3);
+  border-color: #c0c0c0;
+}
+
+.keyword-chip.priority-3 {
+  background: rgba(205, 127, 50, 0.3);
+  border-color: #cd7f32;
+}
+
+.keyword-mention-guide ul,
+.review-quality ul {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+}
+
+.keyword-mention-guide li,
+.review-quality li {
+  padding: 8px 0;
+  padding-left: 24px;
+  position: relative;
+}
+
+.keyword-mention-guide li::before,
+.review-quality li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: #90ee90;
+  font-weight: bold;
+  font-size: 1.2em;
+}
+
+.review-incentive {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 15px;
+  border-radius: 8px;
+  margin-top: 15px;
+}
+
+.review-incentive p {
+  margin: 8px 0 0 0;
+  font-size: 1.05em;
+  line-height: 1.6;
+}
+
+.review-templates-v5 {
+  margin-top: 25px;
+}
+
+.template-tabs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.template-item {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.template-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.template-item.highlight {
+  border-color: #ffd700;
+  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+}
+
+.template-header {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 12px 15px;
+  font-weight: 600;
+  font-size: 0.95em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.template-item.highlight .template-header {
+  background: rgba(255, 215, 0, 0.2);
+  color: #ffd700;
+}
+
+.template-content {
+  padding: 15px;
+  margin: 0;
+  font-size: 0.9em;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: 'Malgun Gothic', sans-serif;
+  color: #fff;
+  background: none;
+}
+
+/* ========== 정보 신뢰도 전략 섹션 ========== */
+.info-trust-strategy {
+  margin-top: 20px;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  border: 2px dashed #ccc;
+}
+
+.info-trust-strategy h4 {
+  margin: 0 0 15px 0;
+  font-size: 1.2em;
+  font-weight: 600;
+  color: #555;
+}
+
+.info-trust-strategy ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.info-trust-strategy li {
+  padding: 10px 0;
+  padding-left: 32px;
+  position: relative;
+  color: #666;
+  font-size: 0.95em;
+  line-height: 1.6;
+}
+
+.info-trust-strategy li::before {
+  content: "✅";
+  position: absolute;
+  left: 0;
+  font-size: 1.2em;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .review-targets {
+    flex-direction: column;
+  }
+
+  .template-tabs {
+    grid-template-columns: 1fr;
+  }
+}

@@ -9,19 +9,39 @@ interface Guide {
   priority: string
 }
 
+type BusinessType = '공통' | '카페' | '음식점' | '병원' | '미용실' | '학원' | '헬스장'
+
+interface BusinessTypeInfo {
+  name: BusinessType
+  icon: string
+  color: string
+}
+
+const BUSINESS_TYPES: BusinessTypeInfo[] = [
+  { name: '공통', icon: '🎯', color: '#6366f1' },
+  { name: '카페', icon: '☕', color: '#8b5cf6' },
+  { name: '음식점', icon: '🍽️', color: '#ec4899' },
+  { name: '병원', icon: '🏥', color: '#ef4444' },
+  { name: '미용실', icon: '✂️', color: '#f59e0b' },
+  { name: '학원', icon: '📚', color: '#10b981' },
+  { name: '헬스장', icon: '💪', color: '#06b6d4' }
+]
+
 function OptimizationGuide() {
   const [guides, setGuides] = useState<Guide[]>([])
   const [selectedGuide, setSelectedGuide] = useState<Guide | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [selectedBusinessType, setSelectedBusinessType] = useState<BusinessType>('공통')
 
   useEffect(() => {
-    fetchGuides()
-  }, [])
+    fetchGuides(selectedBusinessType)
+  }, [selectedBusinessType])
 
-  const fetchGuides = async () => {
+  const fetchGuides = async (businessType: BusinessType) => {
+    setLoading(true)
     try {
-      const response = await axios.get('/api/guides')
+      const response = await axios.get(`/api/guides?business_type=${encodeURIComponent(businessType)}`)
       setGuides(response.data.guides)
       if (response.data.guides.length > 0) {
         setSelectedGuide(response.data.guides[0])
@@ -31,6 +51,11 @@ function OptimizationGuide() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleBusinessTypeChange = (businessType: BusinessType) => {
+    setSelectedBusinessType(businessType)
+    setSelectedGuide(null)
   }
 
   const getPriorityBadge = (priority: string) => {
@@ -77,10 +102,28 @@ function OptimizationGuide() {
 
   return (
     <div className="optimization-guide">
-      <h2>📖 최적화 가이드</h2>
+      <h2>📖 업종별 최적화 가이드</h2>
       <p className="description">
-        네이버 플레이스 최적화를 위한 실전 가이드입니다
+        업종을 선택하면 맞춤형 최적화 전략을 확인할 수 있습니다
       </p>
+
+      {/* 업종 선택 버튼 */}
+      <div className="business-type-selector">
+        {BUSINESS_TYPES.map((type) => (
+          <button
+            key={type.name}
+            className={`business-type-btn ${selectedBusinessType === type.name ? 'active' : ''}`}
+            onClick={() => handleBusinessTypeChange(type.name)}
+            style={{
+              borderColor: selectedBusinessType === type.name ? type.color : '#e5e7eb',
+              background: selectedBusinessType === type.name ? `${type.color}15` : 'white'
+            }}
+          >
+            <span className="business-type-icon">{type.icon}</span>
+            <span className="business-type-name">{type.name}</span>
+          </button>
+        ))}
+      </div>
 
       <div className="guide-container">
         <div className="guide-menu">
