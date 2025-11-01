@@ -329,7 +329,7 @@ async def test_naver():
         }
 
     try:
-        count = await engine.get_naver_competition("강남역 카페")
+        count = await engine.get_naver_competition("강남역 카페", "서울 강남구", "카페")
         return {
             "status": "success",
             "message": "네이버 검색 API 연동 성공",

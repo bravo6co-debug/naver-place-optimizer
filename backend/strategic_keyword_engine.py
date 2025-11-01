@@ -208,11 +208,16 @@ class StrategicKeywordEngine:
         return monthly_searches
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-    async def get_naver_competition(self, keyword: str) -> int:
+    async def get_naver_competition(
+        self,
+        keyword: str,
+        region: Optional[str] = None,
+        category: Optional[str] = None
+    ) -> int:
         """네이버 검색 API로 경쟁도 측정"""
         if not self.naver_client_id or not self.naver_client_secret:
             # API 키 없으면 추정값 반환
-            return self._estimate_competition(keyword)
+            return self._estimate_competition(keyword, region, category)
 
         try:
             async with httpx.AsyncClient() as client:
@@ -229,23 +234,109 @@ class StrategicKeywordEngine:
                     data = response.json()
                     return data.get("total", 0)
                 else:
-                    return self._estimate_competition(keyword)
+                    return self._estimate_competition(keyword, region, category)
         except Exception:
-            return self._estimate_competition(keyword)
+            return self._estimate_competition(keyword, region, category)
 
-    def _estimate_competition(self, keyword: str) -> int:
-        """경쟁도 추정 (API 없을 때)"""
-        # 키워드 길이 기반 간단 추정
+    def _detect_category_from_keyword(self, keyword: str) -> Optional[str]:
+        """키워드에서 업종 자동 감지"""
+        keyword_lower = keyword.lower()
+
+        # 각 카테고리의 base_keywords로 매칭
+        for category, data in self.CATEGORY_DATA.items():
+            base_keywords = data.get("base_keywords", [])
+            if any(bk in keyword_lower for bk in base_keywords):
+                return category
+
+        return None
+
+    def _estimate_competition(
+        self,
+        keyword: str,
+        region: Optional[str] = None,
+        category: Optional[str] = None
+    ) -> int:
+        """
+        향상된 경쟁도 추정 (API 실패 시 폴백)
+
+        개선사항:
+        - 인구 데이터 기반 지역별 가중치
+        - 업종별 시장 포화도 반영
+        - 고경쟁 키워드 패턴 감지
+        - 키워드 특성 분석 (단순 단어 수 이상)
+        """
+        base_score = 1000
+
+        # 1. 키워드 길이 기반 특성 분석 (개선된 버전)
         word_count = len(keyword.split())
+        length_multiplier = {
+            1: 50,    # "맛집" -> 매우 높은 경쟁
+            2: 10,    # "강남 맛집" -> 높은 경쟁
+            3: 3,     # "강남역 맛집 추천" -> 중간 경쟁
+            4: 1,     # "강남역 근처 데이트 맛집" -> 낮은 경쟁
+        }.get(word_count, 0.5 if word_count > 4 else 50)
 
-        if word_count >= 4:
-            return 100  # 롱테일
-        elif word_count == 3:
-            return 500
-        elif word_count == 2:
-            return 5000
+        # 2. 고경쟁 키워드 패턴 감지 (가산 방식으로 변경)
+        high_competition_patterns = {
+            '맛집': 2.0, '카페': 1.8, '추천': 1.3, 'best': 1.5, '순위': 1.4,
+            '인기': 1.2, '유명': 1.2, '핫플': 1.5, '웨이팅': 1.3,
+            '병원': 1.5, '피부과': 1.4, '성형외과': 1.6, '치과': 1.4,
+            '한의원': 1.3, '미용실': 1.3, '네일': 1.2, '헬스장': 1.2,
+            '학원': 1.3, '과외': 1.2, '영어': 1.3,
+        }
+
+        keyword_multiplier = 1.0
+        for pattern, multiplier in high_competition_patterns.items():
+            if pattern in keyword.lower():
+                keyword_multiplier += (multiplier - 1)  # 가산 방식
+
+        # 3. 지역 인구 기반 가중치 (인구 API 데이터 활용)
+        region_multiplier = 1.0
+        if region:
+            try:
+                population = get_region_population(region)
+                # 인구 기반 시장 규모 가중치 (보정된 값)
+                if population >= 500000:      # 대형 구 (50만 이상)
+                    region_multiplier = 2.5
+                elif population >= 300000:    # 중형 구 (30만 이상)
+                    region_multiplier = 1.8
+                elif population >= 100000:    # 소형 구 (10만 이상)
+                    region_multiplier = 1.3
+                else:                         # 소규모 지역
+                    region_multiplier = 0.8
+            except Exception:
+                region_multiplier = 1.5  # 기본값 (중간 규모 가정)
+
+        # 4. 업종별 가중치 (시장 포화도 + 온라인 검색 강도)
+        industry_multiplier = 1.0
+        detected_category = category or self._detect_category_from_keyword(keyword)
+
+        if detected_category and detected_category in self.CATEGORY_DATA:
+            cat_data = self.CATEGORY_DATA[detected_category]
+            usage_rate = cat_data.get("usage_rate", 0.5)      # 시장 사용률
+            search_rate = cat_data.get("search_rate", 0.5)    # 온라인 검색 비율
+
+            # 사용률이 높을수록 경쟁 증가, 검색률이 높을수록 온라인 경쟁 증가 (조정된 공식)
+            industry_multiplier = 0.5 + (usage_rate * 1.2) + (search_rate * 0.8)
+            # 예: 카페 (0.5 + 0.8 * 1.2 + 0.4 * 0.8) = 1.78
+            # 예: 헬스장 (0.5 + 0.25 * 1.2 + 0.5 * 0.8) = 1.2
         else:
-            return 50000
+            # 카테고리 감지 실패 시 기본값
+            industry_multiplier = 1.2
+
+        # 5. 최종 경쟁도 계산
+        estimated = int(
+            base_score *
+            length_multiplier *
+            keyword_multiplier *
+            region_multiplier *
+            industry_multiplier
+        )
+
+        # 상한선/하한선 설정 (합리적 범위 유지)
+        estimated = max(50, min(estimated, 100000))
+
+        return estimated
 
     async def generate_keywords_with_gpt(self, category: str, location: str, specialty: Optional[str] = None) -> List[Dict]:
         """GPT-4로 전략적 키워드 생성"""
@@ -487,8 +578,8 @@ JSON 형식으로 반환:
         }
         estimated_searches = int(base_searches * level_multipliers.get(level, 0.1))
 
-        # 네이버 경쟁도
-        naver_results = await self.get_naver_competition(keyword)
+        # 네이버 경쟁도 (지역 및 카테고리 컨텍스트 포함)
+        naver_results = await self.get_naver_competition(keyword, location, category)
 
         # 경쟁도 점수 계산 (0-100)
         if naver_results < 100:
