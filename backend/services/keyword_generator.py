@@ -218,28 +218,43 @@ class KeywordGeneratorService:
                         "reason": "니치 키워드"
                     })
 
-        # Level 3 - 중간 (5개) - specialty 필수 포함
+        # Level 3 - 중간 (5개) - 자연스러운 조사 사용
+        patterns_level3 = [
+            lambda loc, spec, base: f"{loc}에서 {spec} 잘하는 곳",
+            lambda loc, spec, base: f"{loc} {spec} 맛있는 {base}",
+            lambda loc, spec, base: f"{loc}의 유명한 {spec} {base}",
+            lambda loc, spec, base: f"{spec} 전문 {base} {loc}",
+            lambda loc, spec, base: f"{loc} {spec} {base} 추천"
+        ]
+
         for i, base in enumerate(base_keywords[:5]):
             if specialty_list:
                 # 다중 특징 중 순차적으로 선택
                 spec = specialty_list[i % len(specialty_list)]
+                # 5가지 패턴 순환 사용
+                pattern = patterns_level3[i % len(patterns_level3)]
                 keywords.append({
-                    "keyword": f"{location} {spec} {base}",
+                    "keyword": pattern(location, spec, base),
                     "level": 3,
-                    "reason": f"지역 + '{spec}' + 업종"
+                    "reason": f"자연스러운 패턴 {i+1}"
                 })
             elif modifiers:
-                # specialty 없는 경우 기존 로직
+                # specialty 없는 경우 조사 사용
                 mod_type = random.choice(list(modifiers.keys()))
                 mod_value = random.choice(modifiers[mod_type])
+                pattern = random.choice([
+                    f"{location}에서 {mod_value} {base}",
+                    f"{location} {mod_value} {base} 추천",
+                    f"{location}의 {mod_value} {base}"
+                ])
                 keywords.append({
-                    "keyword": f"{location} {mod_value} {base}",
+                    "keyword": pattern,
                     "level": 3,
-                    "reason": f"{mod_type} 반영"
+                    "reason": f"{mod_type} 자연스러운 표현"
                 })
             else:
                 keywords.append({
-                    "keyword": f"{location} {base}",
+                    "keyword": f"{location}에서 {base}",
                     "level": 3,
                     "reason": "중간 키워드"
                 })
