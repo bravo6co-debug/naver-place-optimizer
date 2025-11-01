@@ -189,20 +189,20 @@ class StrategyPlannerService:
             target_level=5,
             target_keywords_count=15,
             strategies=[
-                "✅ [최우선] 영수증 리뷰 50개 확보: 현장 POP/QR 코드 리뷰 유도",
+                "✅ [최우선] 영수증 리뷰 100개 확보: 현장 POP/QR 코드 리뷰 유도",
                 "✅ [핵심] 롱테일 키워드 3개 이상 리뷰에 자연스럽게 삽입",
                 "✅ [품질] 리뷰 기준: 텍스트 30자+ / 사진 1장+ (20% 비율) / 키워드 2개+",
-                "✅ [최신성] 일 1-2개 신규 리뷰 유입 (꾸준함이 핵심)"
+                "✅ [최신성] 일 3-4개 신규 리뷰 유입 (꾸준함이 핵심)"
             ],
             goals=[
                 "각 키워드 Top 1-3 진입",
                 "프로필 완성도 100%",
-                "리뷰 50개 이상 + 평점 4.5+"
+                "리뷰 100개 이상 + 평점 4.5+"
             ],
             # V5 필드
-            receipt_review_target=50,
-            weekly_review_target=12,
-            consistency_importance="일 1-2개 신규 리뷰 (꾸준함이 핵심, 1개월 목표)",
+            receipt_review_target=100,
+            weekly_review_target=23,
+            consistency_importance="일 3-4개 신규 리뷰 (꾸준함이 핵심, 1개월 목표)",
             receipt_review_keywords=[],
             review_quality_standard={
                 "min_text_length": 30,
@@ -217,18 +217,19 @@ class StrategyPlannerService:
             review_templates={}
         ))
 
-        # Phase 2: 니치 공략 (3-8주) - Level 4
+        # Phase 2: 니치 공략 (2개월) - Level 4
         phases.append(StrategyPhase(
             phase=2,
             name="니치 공략",
-            duration="3-8주",
+            duration="2개월",
             target_level=4,
             target_keywords_count=10,
             strategies=[
-                "✅ [최우선] 영수증 리뷰 300개 확보 (주 10개 목표)",
+                "✅ [최우선] 영수증 리뷰 300개 확보 (주 35개 목표)",
                 "✅ [핵심] 롱테일 키워드 4개 이상 리뷰에 자연스럽게 삽입",
                 "✅ [품질] 리뷰 기준: 텍스트 80자+ / 사진 3장+ / 키워드 4개+",
-                "✅ [정보신뢰도] 플레이스 정보 완성도 100% 유지 (주 1회 점검)"
+                "✅ [정보신뢰도] 플레이스 정보 완성도 100% 유지 (주 1회 점검)",
+                "✅ [최신성] 일 5개 신규 리뷰 유입 (공백 없이 꾸준히)"
             ],
             goals=[
                 "각 키워드 Top 5 진입",
@@ -237,18 +238,18 @@ class StrategyPlannerService:
             ]
         ))
 
-        # Phase 3: 중위권 진입 (3-6개월) - Level 3
+        # Phase 3: 중위권 진입 (3개월) - Level 3
         phases.append(StrategyPhase(
             phase=3,
             name="중위권 진입",
-            duration="3-6개월",
+            duration="3개월",
             target_level=3,
             target_keywords_count=5,
             strategies=[
-                "✅ [최우선] 영수증 리뷰 999개 확보 (주 15개 목표)",
+                "✅ [최우선] 영수증 리뷰 500개 확보 (주 39개 목표)",
                 "✅ [핵심] 롱테일 키워드 5개 이상 리뷰에 자연스럽게 삽입",
                 "✅ [품질] 리뷰 기준: 텍스트 100자+ / 사진 4장+ / 키워드 5개+",
-                "✅ [최신성] 매일 2개 이상 신규 리뷰 유입 (공백 없이 꾸준히)"
+                "✅ [최신성] 일 5-6개 신규 리뷰 유입 (공백 없이 꾸준히)"
             ],
             goals=[
                 "각 키워드 Top 10 안착",
@@ -389,9 +390,9 @@ class StrategyPlannerService:
 
         # 폴백: 기본값 (V5 Simplified)
         consistency_messages = {
-            5: "일 1-2개 신규 리뷰 (꾸준함이 핵심, 1개월 목표)",
-            4: "일 1-2개 신규 리뷰 (1-2일 공백 없음, 2개월 목표)",
-            3: "일 2-3개 신규 리뷰 (절대 공백 없음, 3개월 목표)",
+            5: "일 3-4개 신규 리뷰 (꾸준함이 핵심, 1개월 목표)",
+            4: "일 5개 신규 리뷰 (공백 없이 꾸준히, 2개월 목표)",
+            3: "일 5-6개 신규 리뷰 (절대 공백 없음, 3개월 목표)",
             2: "일 2-3개 신규 리뷰 (최신성 유지, 지속)",
             1: "일 2-3개 신규 리뷰 (1등 유지, 지속)"
         }
@@ -410,9 +411,9 @@ class StrategyPlannerService:
         }
 
         return {
-            "target": {5: 50, 4: 300, 3: 999, 2: 999, 1: 2000}.get(level, 50),
-            "weekly_target": {5: 12, 4: 12, 3: 19, 2: 19, 1: 19}.get(level, 12),
-            "consistency": consistency_messages.get(level, "일 1-2개 신규 리뷰"),
+            "target": {5: 100, 4: 300, 3: 500, 2: 999, 1: 2000}.get(level, 100),
+            "weekly_target": {5: 23, 4: 35, 3: 39, 2: 19, 1: 19}.get(level, 23),
+            "consistency": consistency_messages.get(level, "일 3-4개 신규 리뷰"),
             "keywords": [kw.keyword for kw in priority_keywords[:5]],
             "quality_standard": quality_standards.get(level, quality_standards[5]),
             "incentive": "영수증 리뷰 작성 시 할인",
