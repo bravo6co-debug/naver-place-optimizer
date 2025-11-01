@@ -422,10 +422,6 @@ function StrategicAnalyzer() {
               <div className="summary-value">+{result.summary.gap}명/일</div>
             </div>
             <div className="summary-card">
-              <div className="summary-label">예상 달성률</div>
-              <div className="summary-value success">{result.summary.achievement_rate}%</div>
-            </div>
-            <div className="summary-card">
               <div className="summary-label">권장 기간</div>
               <div className="summary-value">{result.summary.recommended_timeline}</div>
             </div>
