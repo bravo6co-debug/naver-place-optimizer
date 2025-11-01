@@ -459,18 +459,10 @@
 
 .content-section li {
   padding: 8px 0;
-  padding-left: 25px;
+  padding-left: 0;
   position: relative;
   color: #555;
   line-height: 1.5;
-}
-
-.content-section li:before {
-  content: '✓';
-  position: absolute;
-  left: 0;
-  color: #667eea;
-  font-weight: bold;
 }
 
 .phase-arrow {
