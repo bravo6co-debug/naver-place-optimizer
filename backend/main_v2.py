@@ -120,28 +120,34 @@ def get_level_name(level: int) -> str:
 
 def get_confidence_level(metrics: KeywordMetrics) -> str:
     """
-    키워드 등급 (난이도 기반)
-    난이도가 높을수록 높은 등급 부여
-    """
-    # 데이터 소스 기반 최고 등급
-    if metrics.data_source == "api":
-        return "S급 - 실제 검색광고 데이터"
-    elif metrics.data_source == "naver_local":
-        return "S급 - 네이버 로컬 데이터"
+    키워드 신뢰도 등급
 
-    # 난이도 점수 기반 등급 (정순: 높은 난이도 = 높은 등급)
+    S급: 검색광고 API 실제 데이터 (월간검색수 + 경쟁정도)
+    A~E급: 추정 데이터 기반 난이도
+    """
+    # ✅ S급: 검색광고 API 데이터 (최고 신뢰도)
+    if metrics.data_source == "api":
+        # 경쟁도에 따라 세분화
+        if metrics.competition_score >= 80:  # "높음" (85점)
+            return "S급 - 고경쟁"
+        elif metrics.competition_score >= 55:  # "중간" (60점)
+            return "S급 - 중경쟁"
+        else:  # "낮음" (30점)
+            return "S급 - 저경쟁"
+
+    # A~E급: 추정 데이터 기반 (난이도 점수)
     avg_score = (metrics.competition_score + metrics.difficulty_score) / 2
 
-    if avg_score >= 80:      # Level 1
-        return "A급"
-    elif avg_score >= 60:    # Level 2
-        return "B급"
-    elif avg_score >= 40:    # Level 3
-        return "C급"
-    elif avg_score >= 20:    # Level 4
-        return "D급"
-    else:                    # Level 5
-        return "E급"
+    if avg_score >= 80:
+        return "A급"  # 매우 어려움
+    elif avg_score >= 60:
+        return "B급"  # 어려움
+    elif avg_score >= 40:
+        return "C급"  # 중간
+    elif avg_score >= 20:
+        return "D급"  # 쉬움
+    else:
+        return "E급"  # 매우 쉬움
 
 
 # ========== API 엔드포인트 ==========
