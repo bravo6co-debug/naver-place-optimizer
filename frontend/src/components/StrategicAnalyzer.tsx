@@ -551,10 +551,6 @@ function StrategicAnalyzer() {
                         <span className="target-value">{phase.target_keywords_count}개</span>
                       </div>
                       <div className="target-item">
-                        <span className="target-label">예상 유입:</span>
-                        <span className="target-value success">+{phase.expected_daily_visitors}명/일</span>
-                      </div>
-                      <div className="target-item">
                         <span className="target-label">난이도:</span>
                         <span className="target-value" style={{
                           color: phase.difficulty_level === '쉬움' ? '#10b981' :

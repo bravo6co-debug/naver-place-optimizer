@@ -653,8 +653,7 @@ JSON 형식으로 반환:
                 "각 키워드 Top 3 달성",
                 "프로필 완성도 100%",
                 "기본 트래픽 확보"
-            ],
-            expected_daily_visitors=int(gap * 0.15)
+            ]
         ))
 
         # Phase 2: 니치 공략 (3-8주) - Level 4 (V5 Simplified)
@@ -674,8 +673,7 @@ JSON 형식으로 반환:
                 "각 키워드 Top 5 진입",
                 "평점 4.5+ 유지",
                 "재방문율 향상"
-            ],
-            expected_daily_visitors=int(gap * 0.35)
+            ]
         ))
 
         # Phase 3: 중위권 진입 (3-6개월) - Level 3 (V5 Simplified)
@@ -695,8 +693,7 @@ JSON 형식으로 반환:
                 "각 키워드 Top 10 안착",
                 "월간 방문자 1000+",
                 "단골 고객 확보"
-            ],
-            expected_daily_visitors=int(gap * 0.70)
+            ]
         ))
 
         # Phase 4: 상위권 도전 (6개월+) - Level 2 (V5 Simplified)
@@ -716,8 +713,7 @@ JSON 형식으로 반환:
                 "지역 대표 업체로 인식",
                 "리뷰 999개 유지",
                 "매출 안정화"
-            ],
-            expected_daily_visitors=gap
+            ]
         ))
 
         # Phase 5: 최상위 (1년+) - Level 1 (V5 Simplified)
@@ -737,8 +733,7 @@ JSON 형식으로 반환:
                 "지역 1위 업체 확립",
                 "리뷰 2000개 이상",
                 "브랜드 인지도 극대화"
-            ],
-            expected_daily_visitors=int(gap * 1.5)
+            ]
         ))
 
         return phases

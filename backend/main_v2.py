@@ -78,13 +78,11 @@ class StrategyPhaseResponse(BaseModel):
     target_keywords_count: int
     strategies: List[str]
     goals: List[str]
-    expected_daily_visitors: int
 
     # V4 추가 필드
     priority_keywords: List[str] = []
     keyword_traffic_breakdown: Dict[str, int] = {}
     difficulty_level: str = "보통"
-    cumulative_visitors: int = 0
 
     # V5 Simplified 추가 필드
     receipt_review_target: int = 0
@@ -247,12 +245,10 @@ async def strategic_analysis(request: StrategicAnalysisRequest):
                 target_keywords_count=phase.target_keywords_count,
                 strategies=phase.strategies,
                 goals=phase.goals,
-                expected_daily_visitors=phase.expected_daily_visitors,
                 # V4 추가 필드
                 priority_keywords=phase.priority_keywords,
                 keyword_traffic_breakdown=phase.keyword_traffic_breakdown,
                 difficulty_level=phase.difficulty_level,
-                cumulative_visitors=phase.cumulative_visitors,
                 # V5 Simplified 추가 필드
                 receipt_review_target=phase.receipt_review_target,
                 weekly_review_target=phase.weekly_review_target,
@@ -266,13 +262,10 @@ async def strategic_analysis(request: StrategicAnalysisRequest):
             ))
 
         # 5. 요약 정보
-        total_traffic = sum([phase.expected_daily_visitors for phase in roadmap])
         summary = {
             "current_daily_visitors": request.current_daily_visitors,
             "target_daily_visitors": request.target_daily_visitors,
             "gap": request.target_daily_visitors - request.current_daily_visitors,
-            "total_expected_traffic": total_traffic,
-            "achievement_rate": round((total_traffic / max(request.target_daily_visitors - request.current_daily_visitors, 1)) * 100, 1),
             "total_phases": len(roadmap),
             "recommended_timeline": "6-12개월",
             "data_sources": [
