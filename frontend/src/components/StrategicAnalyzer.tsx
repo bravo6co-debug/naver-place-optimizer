@@ -323,10 +323,13 @@ function StrategicAnalyzer() {
               type="text"
               value={specialty}
               onChange={(e) => setSpecialty(e.target.value)}
-              placeholder="브런치 전문, 24시간 (필수)"
+              placeholder="온천, 찜질, 인피니티풀 (컴마로 여러 개 입력 가능)"
               disabled={loading}
               required
             />
+            <small style={{ color: '#666', fontSize: '0.85em', marginTop: '-2px' }}>
+              💡 여러 특징을 컴마(,)로 구분하여 입력하세요
+            </small>
           </div>
         </div>
 

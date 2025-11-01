@@ -77,7 +77,7 @@ class KeywordGeneratorService:
         cat_data: Dict,
         specialty: Optional[str] = None
     ) -> List[Dict]:
-        """패턴 기반 폴백 키워드 생성 (specialty 우선 반영)"""
+        """패턴 기반 폴백 키워드 생성 (specialty 우선 반영, 다중 특징 지원)"""
         base_keywords = cat_data.get("base_keywords", [category])
         modifiers = cat_data.get("modifiers", {})
         patterns = cat_data.get("longtail_patterns", [])
@@ -85,31 +85,48 @@ class KeywordGeneratorService:
 
         keywords = []
 
-        # specialty 우선 처리
-        spec_prefix = f"{specialty} " if specialty else ""
+        # specialty 파싱: 컴마로 구분된 여러 특징 처리
+        specialty_list = []
+        if specialty:
+            specialty_list = [s.strip() for s in specialty.split(',') if s.strip()]
 
         # Level 5 - 롱테일 (15개) - specialty 필수 포함
-        for _ in range(15):
-            if patterns and modifiers and specialty:
-                # specialty + 패턴 조합
-                pattern = random.choice(patterns)
-                keyword = self._apply_pattern(pattern, location, modifiers)
-                # specialty를 키워드에 삽입
-                keyword = keyword.replace(location, f"{location} {specialty}", 1)
-                keywords.append({
-                    "keyword": keyword,
-                    "level": 5,
-                    "reason": f"'{specialty}' 특징 반영 롱테일"
-                })
-            elif specialty:
+        for i in range(15):
+            if patterns and modifiers and specialty_list:
+                # 다중 특징 조합 전략
+                if len(specialty_list) >= 2 and i % 3 == 0:
+                    # 2개 특징 조합
+                    specs = random.sample(specialty_list, min(2, len(specialty_list)))
+                    spec_str = ' '.join(specs)
+                    pattern = random.choice(patterns)
+                    keyword = self._apply_pattern(pattern, location, modifiers)
+                    keyword = keyword.replace(location, f"{location} {spec_str}", 1)
+                    keywords.append({
+                        "keyword": keyword,
+                        "level": 5,
+                        "reason": f"'{'+'.join(specs)}' 복합 특징 롱테일"
+                    })
+                else:
+                    # 개별 특징 사용
+                    spec = random.choice(specialty_list)
+                    pattern = random.choice(patterns)
+                    keyword = self._apply_pattern(pattern, location, modifiers)
+                    keyword = keyword.replace(location, f"{location} {spec}", 1)
+                    keywords.append({
+                        "keyword": keyword,
+                        "level": 5,
+                        "reason": f"'{spec}' 특징 반영 롱테일"
+                    })
+            elif specialty_list:
                 # specialty + 기본 조합
+                spec = random.choice(specialty_list)
                 base = random.choice(base_keywords)
                 mod_keys = list(modifiers.keys()) if modifiers else ["추천", "베스트"]
                 mod = random.choice(mod_keys) if isinstance(mod_keys[0], str) else "추천"
                 keywords.append({
-                    "keyword": f"{location} {specialty} {base} {mod}",
+                    "keyword": f"{location} {spec} {base} {mod}",
                     "level": 5,
-                    "reason": f"'{specialty}' 특징 + {mod}"
+                    "reason": f"'{spec}' 특징 + {mod}"
                 })
             else:
                 # specialty 없는 경우 기존 로직
@@ -121,24 +138,26 @@ class KeywordGeneratorService:
                 })
 
         # Level 4 - 니치 (10개) - specialty 필수 포함
-        for _ in range(10):
-            if specialty and modifiers:
-                # specialty + 1개 수식어
+        for i in range(10):
+            if specialty_list and modifiers:
+                # 다중 특징 중 랜덤 선택 + 수식어
+                spec = random.choice(specialty_list)
                 mod_type = random.choice(list(modifiers.keys()))
                 mod_value = random.choice(modifiers[mod_type])
                 base = random.choice(base_keywords)
                 keywords.append({
-                    "keyword": f"{location} {specialty} {mod_value} {base}",
+                    "keyword": f"{location} {spec} {mod_value} {base}",
                     "level": 4,
-                    "reason": f"'{specialty}' + {mod_type}"
+                    "reason": f"'{spec}' + {mod_type}"
                 })
-            elif specialty:
+            elif specialty_list:
                 # specialty만 포함
+                spec = random.choice(specialty_list)
                 base = random.choice(base_keywords)
                 keywords.append({
-                    "keyword": f"{location} {specialty} {base}",
+                    "keyword": f"{location} {spec} {base}",
                     "level": 4,
-                    "reason": f"'{specialty}' 특징 니치 키워드"
+                    "reason": f"'{spec}' 특징 니치 키워드"
                 })
             elif modifiers:
                 # specialty 없는 경우 기존 로직
@@ -162,13 +181,14 @@ class KeywordGeneratorService:
                     })
 
         # Level 3 - 중간 (5개) - specialty 필수 포함
-        for base in base_keywords[:5]:
-            if specialty:
-                # specialty + 업종
+        for i, base in enumerate(base_keywords[:5]):
+            if specialty_list:
+                # 다중 특징 중 순차적으로 선택
+                spec = specialty_list[i % len(specialty_list)]
                 keywords.append({
-                    "keyword": f"{location} {specialty} {base}",
+                    "keyword": f"{location} {spec} {base}",
                     "level": 3,
-                    "reason": f"지역 + '{specialty}' + 업종"
+                    "reason": f"지역 + '{spec}' + 업종"
                 })
             elif modifiers:
                 # specialty 없는 경우 기존 로직
@@ -224,18 +244,23 @@ class KeywordGeneratorService:
         specialty: Optional[str] = None
     ) -> List[Dict]:
         """
-        커스텀 업종용 기본 키워드 생성 (specialty 우선 반영)
+        커스텀 업종용 기본 키워드 생성 (specialty 우선 반영, 다중 특징 지원)
 
         Args:
             category: 업종
             location: 지역
-            specialty: 특징/전문분야
+            specialty: 특징/전문분야 (컴마로 구분된 여러 특징 가능)
 
         Returns:
             기본 키워드 리스트 (35개)
         """
         location_parts = location.split()
         keywords = []
+
+        # specialty 파싱: 컴마로 구분된 여러 특징 처리
+        specialty_list = []
+        if specialty:
+            specialty_list = [s.strip() for s in specialty.split(',') if s.strip()]
 
         # 일반적인 수식어들
         generic_modifiers = ["추천", "잘하는곳", "가격", "후기", "위치", "영업시간", "전화번호"]
@@ -244,13 +269,24 @@ class KeywordGeneratorService:
 
         # Level 5 - 롱테일 (15개) - specialty 필수
         for i in range(15):
-            if specialty:
-                if i < 5:
-                    kw = f"{location} {specialty} {random.choice(qualities)} {category}"
-                elif i < 10:
-                    kw = f"{location} {specialty} {category} {random.choice(purposes)}"
+            if specialty_list:
+                # 다중 특징 처리
+                if len(specialty_list) >= 2 and i % 4 == 0:
+                    # 2개 특징 조합
+                    specs = random.sample(specialty_list, min(2, len(specialty_list)))
+                    spec_str = ' '.join(specs)
+                    kw = f"{location} {spec_str} {category} {random.choice(purposes)}"
+                    reason = f"'{'+'.join(specs)}' 복합 특징"
                 else:
-                    kw = f"{location} {specialty} {category} {random.choice(generic_modifiers)}"
+                    # 개별 특징 사용
+                    spec = random.choice(specialty_list)
+                    if i % 3 == 0:
+                        kw = f"{location} {spec} {random.choice(qualities)} {category}"
+                    elif i % 3 == 1:
+                        kw = f"{location} {spec} {category} {random.choice(purposes)}"
+                    else:
+                        kw = f"{location} {spec} {category} {random.choice(generic_modifiers)}"
+                    reason = f"'{spec}' 특징 반영"
             else:
                 if i < 5:
                     kw = f"{location} {random.choice(qualities)} {category} {random.choice(generic_modifiers)}"
@@ -258,26 +294,29 @@ class KeywordGeneratorService:
                     kw = f"{location} {category} {random.choice(purposes)} {random.choice(generic_modifiers)}"
                 else:
                     kw = f"{location} {category} {random.choice(generic_modifiers)} {random.choice(qualities)}"
+                reason = "커스텀 업종"
 
             keywords.append({
                 "keyword": kw,
                 "level": 5,
-                "reason": f"롱테일 키워드 ({f'{specialty} 특징 반영' if specialty else '커스텀 업종'})"
+                "reason": f"롱테일 키워드 ({reason})"
             })
 
         # Level 4 - 니치 (10개) - specialty 필수
-        if specialty:
+        if specialty_list:
             for mod in generic_modifiers[:7]:
+                spec = random.choice(specialty_list)
                 keywords.append({
-                    "keyword": f"{location} {specialty} {category} {mod}",
+                    "keyword": f"{location} {spec} {category} {mod}",
                     "level": 4,
-                    "reason": f"'{specialty}' 특징 니치 키워드"
+                    "reason": f"'{spec}' 특징 니치 키워드"
                 })
             for qual in qualities[:3]:
+                spec = random.choice(specialty_list)
                 keywords.append({
-                    "keyword": f"{location} {specialty} {qual} {category}",
+                    "keyword": f"{location} {spec} {qual} {category}",
                     "level": 4,
-                    "reason": f"'{specialty}' + 품질 키워드"
+                    "reason": f"'{spec}' + 품질 키워드"
                 })
         else:
             for mod in generic_modifiers[:7]:
@@ -294,13 +333,15 @@ class KeywordGeneratorService:
                 })
 
         # Level 3 - 중간 (5개) - specialty 필수
-        if specialty:
+        if specialty_list:
+            # 다중 특징을 순차적으로 사용
+            specs_to_use = specialty_list * 2  # 5개 키워드에 충분하도록 반복
             keywords.extend([
-                {"keyword": f"{location} {specialty} {category}", "level": 3, "reason": f"지역 + '{specialty}' + 업종"},
-                {"keyword": f"{location} {specialty} {category} 추천", "level": 3, "reason": f"'{specialty}' 추천 키워드"},
-                {"keyword": f"{location} {specialty} {category} 가격", "level": 3, "reason": f"'{specialty}' 가격 키워드"},
-                {"keyword": f"{location} {specialty} {category} 후기", "level": 3, "reason": f"'{specialty}' 후기 키워드"},
-                {"keyword": f"{location} {specialty} {category} 예약", "level": 3, "reason": f"'{specialty}' 예약 키워드"}
+                {"keyword": f"{location} {specs_to_use[0]} {category}", "level": 3, "reason": f"지역 + '{specs_to_use[0]}' + 업종"},
+                {"keyword": f"{location} {specs_to_use[1]} {category} 추천", "level": 3, "reason": f"'{specs_to_use[1]}' 추천 키워드"},
+                {"keyword": f"{location} {specs_to_use[2]} {category} 가격", "level": 3, "reason": f"'{specs_to_use[2]}' 가격 키워드"},
+                {"keyword": f"{location} {specs_to_use[3]} {category} 후기", "level": 3, "reason": f"'{specs_to_use[3]}' 후기 키워드"},
+                {"keyword": f"{location} {specs_to_use[4]} {category} 예약", "level": 3, "reason": f"'{specs_to_use[4]}' 예약 키워드"}
             ])
         else:
             keywords.extend([
