@@ -123,7 +123,8 @@ def get_confidence_level(metrics: KeywordMetrics) -> str:
     키워드 신뢰도 등급
 
     S급: 검색광고 API 실제 데이터 (월간검색수 + 경쟁정도)
-    A~E급: 추정 데이터 기반 난이도
+    A급: 정부 통계 실제 데이터 (요식업 전용)
+    B~F급: 추정 데이터 기반 난이도
     """
     # ✅ S급: 검색광고 API 데이터 (최고 신뢰도)
     if metrics.data_source == "api":
@@ -135,19 +136,28 @@ def get_confidence_level(metrics: KeywordMetrics) -> str:
         else:  # "낮음" (30점)
             return "S급 - 저경쟁"
 
-    # A~E급: 추정 데이터 기반 (난이도 점수)
+    # ✅ A급: 정부 통계 CSV 데이터 (요식업 전용, 실제 경쟁도)
+    if metrics.data_source == "restaurant_stats":
+        if metrics.competition_score >= 70:
+            return "A급 - 높음"
+        elif metrics.competition_score >= 40:
+            return "A급 - 중간"
+        else:
+            return "A급 - 낮음"
+
+    # B~F급: 추정 데이터 기반 (난이도 점수)
     avg_score = (metrics.competition_score + metrics.difficulty_score) / 2
 
     if avg_score >= 80:
-        return "A급"  # 매우 어려움
+        return "B급"  # 매우 어려움
     elif avg_score >= 60:
-        return "B급"  # 어려움
+        return "C급"  # 어려움
     elif avg_score >= 40:
-        return "C급"  # 중간
+        return "D급"  # 중간
     elif avg_score >= 20:
-        return "D급"  # 쉬움
+        return "E급"  # 쉬움
     else:
-        return "E급"  # 매우 쉬움
+        return "F급"  # 매우 쉬움
 
 
 # ========== API 엔드포인트 ==========

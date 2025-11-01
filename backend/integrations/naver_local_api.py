@@ -3,6 +3,10 @@
 """
 네이버 로컬 검색 API 통합
 경쟁 업체 수 파악
+
+⚠️ DEPRECATED: 이 모듈은 더 이상 사용되지 않습니다.
+네이버 로컬 API는 경쟁도 측정에 부정확하여 폐기되었습니다.
+대신 restaurant_stats_loader.py (정부 통계 CSV)를 사용하세요.
 """
 
 import os

@@ -142,8 +142,12 @@ class UnifiedKeywordEngine:
         base_searches = volume_data["total"]
         estimated_searches = self.volume_estimator.apply_level_multiplier(base_searches, level)
 
-        # 2. 경쟁도 분석
-        competition_data = await self.competition_analyzer.analyze_competition(keyword)
+        # 2. 경쟁도 분석 (location, category 전달)
+        competition_data = await self.competition_analyzer.analyze_competition(
+            keyword=keyword,
+            location=location,
+            category=category
+        )
 
         # 3. 난이도 점수 계산
         difficulty_score = self.competition_analyzer.calculate_difficulty_score(
