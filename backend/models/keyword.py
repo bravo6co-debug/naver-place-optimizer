@@ -4,7 +4,7 @@
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
+from typing import Optional, Union
 
 
 class KeywordLevel(Enum):
@@ -33,9 +33,9 @@ class KeywordMetrics:
     # 데이터 소스 추적 (S/A/B~F 등급 시스템)
     data_source: str = "estimated"  # "api", "restaurant_stats", "estimated"
 
-    # 네이버 검색광고 API 데이터 (선택적)
-    monthly_pc_searches: Optional[int] = None
-    monthly_mobile_searches: Optional[int] = None
+    # 네이버 검색광고 API 데이터 (선택적, Level 1-2만)
+    monthly_pc_searches: Optional[Union[int, str]] = None  # int or "Fail"
+    monthly_mobile_searches: Optional[Union[int, str]] = None  # int or "Fail"
     monthly_avg_clicks: Optional[int] = None
     competition_level: Optional[str] = None  # "높음", "중간", "낮음"
     avg_cpc: Optional[int] = None  # 평균 클릭 비용

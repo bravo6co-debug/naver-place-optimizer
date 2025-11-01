@@ -44,36 +44,46 @@ class SearchVolumeEstimatorService:
                 "source": "api" or "estimated"
             }
         """
-        # ✅ Level 1-2: API 우선 (재시도 1회)
-        api_data = self._get_from_api(keyword, retry=force_api)
-        if api_data:
-            print(f"✅ [{keyword}] 검색광고 API 데이터 사용: {api_data['monthly_total_searches']:,}회/월")
-            return {
-                "total": api_data["monthly_total_searches"],
-                "pc": api_data["monthly_pc_searches"],
-                "mobile": api_data["monthly_mobile_searches"],
-                "source": "api"
-            }
+        # ✅ Level 1-2만 API 호출 (총 4개 키워드)
+        if force_api:
+            api_data = self._get_from_api(keyword, retry=True)
+            if api_data:
+                print(f"✅ [{keyword}] 검색광고 API 데이터 사용: {api_data['monthly_total_searches']:,}회/월")
+                return {
+                    "total": api_data["monthly_total_searches"],
+                    "pc": api_data["monthly_pc_searches"],
+                    "mobile": api_data["monthly_mobile_searches"],
+                    "source": "api"
+                }
+            else:
+                # Level 1-2: API 실패 시 "Fail" 반환
+                print(f"   ❌ [{keyword}] API 실패 - 'Fail' 표시")
+                if level == 1:
+                    # Level 1은 기본 검색량 사용하되 PC/Mobile은 Fail 표시
+                    default_volume = 10000
+                    return {
+                        "total": default_volume,
+                        "pc": "Fail",
+                        "mobile": "Fail",
+                        "source": "restaurant_stats_fallback"
+                    }
+                else:
+                    # Level 2는 추정치 사용하되 PC/Mobile은 Fail 표시
+                    estimated, grade = self._estimate_from_population(location, category)
+                    return {
+                        "total": estimated,
+                        "pc": "Fail",
+                        "mobile": "Fail",
+                        "source": grade
+                    }
 
-        # ✅ Level 1: API 실패 시 기본 검색량 사용 (estimated 금지)
-        if level == 1:
-            # Level 1은 높은 기본 검색량 적용 (A급 유지)
-            print(f"   ⚠️ [Level 1 검색량] {keyword}: API 없음, 기본 검색량 적용 (A급 유지)")
-            default_volume = 10000  # Level 1 기본 검색량 (월 1만)
-            return {
-                "total": default_volume,
-                "pc": int(default_volume * 0.3),
-                "mobile": int(default_volume * 0.7),
-                "source": "restaurant_stats_fallback"  # A급 폴백
-            }
-
-        # Level 2-5: 인구 기반 추정
+        # Level 3-5: 인구 기반 추정 (PC/Mobile 상세 정보 없음)
         estimated, grade = self._estimate_from_population(location, category)
         print(f"⚠️ [{keyword}] API 데이터 없음 → 추정치 사용: {estimated:,}회/월 (등급: {grade})")
         return {
             "total": estimated,
-            "pc": int(estimated * 0.3),  # PC 30%
-            "mobile": int(estimated * 0.7),  # 모바일 70%
+            "pc": None,  # Level 3-5는 상세 정보 제공 안함
+            "mobile": None,  # Level 3-5는 상세 정보 제공 안함
             "source": grade  # 인구 기반 등급 (estimated, estimated_b ~ estimated_f)
         }
 

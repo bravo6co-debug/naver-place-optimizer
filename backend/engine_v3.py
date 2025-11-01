@@ -266,8 +266,12 @@ if __name__ == "__main__":
         print(f"키워드: {metrics.keyword}")
         print(f"  검색량: {metrics.estimated_monthly_searches:,}회/월")
         print(f"  데이터 소스: {metrics.data_source}")
-        if metrics.monthly_pc_searches:
-            print(f"  PC: {metrics.monthly_pc_searches:,}, 모바일: {metrics.monthly_mobile_searches:,}")
+        if metrics.monthly_pc_searches is not None:
+            # PC/Mobile 검색량 표시 (숫자 또는 "Fail")
+            if isinstance(metrics.monthly_pc_searches, str):
+                print(f"  PC: {metrics.monthly_pc_searches}, 모바일: {metrics.monthly_mobile_searches}")
+            else:
+                print(f"  PC: {metrics.monthly_pc_searches:,}, 모바일: {metrics.monthly_mobile_searches:,}")
         print(f"  경쟁도: {metrics.competition_score}/100")
         print(f"  난이도: {metrics.difficulty_score}/100")
         print(f"  목표: {metrics.recommended_rank_target} ({metrics.estimated_timeline})")
