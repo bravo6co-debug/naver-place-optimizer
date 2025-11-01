@@ -168,7 +168,7 @@ class NaverSearchAdAPI:
             print(f"❌ 연관 키워드 조회 실패: {e}")
             return []
 
-    def parse_keyword_data(self, raw_data: Dict) -> Dict:
+    def parse_keyword_data(self, raw_data: Dict) -> Optional[Dict]:
         """
         API 응답 데이터 파싱 (간소화 버전)
 
@@ -176,10 +176,23 @@ class NaverSearchAdAPI:
             raw_data: API 원본 데이터
 
         Returns:
-            파싱된 데이터
+            파싱된 데이터 또는 None (적은검색량인 경우)
         """
-        pc_searches = raw_data.get("monthlyPcQcCnt", 0) or 0
-        mobile_searches = raw_data.get("monthlyMobileQcCnt", 0) or 0
+        pc_searches_raw = raw_data.get("monthlyPcQcCnt", 0)
+        mobile_searches_raw = raw_data.get("monthlyMobileQcCnt", 0)
+
+        # "적은검색량" 또는 "< 10" 체크
+        if isinstance(pc_searches_raw, str) or isinstance(mobile_searches_raw, str):
+            print(f"   ⚠️ [{raw_data.get('relKeyword', '')}] 적은검색량 (< 10) - API 데이터 무효")
+            return None
+
+        pc_searches = pc_searches_raw or 0
+        mobile_searches = mobile_searches_raw or 0
+
+        # 검색량이 너무 적으면 (< 10) None 반환
+        if pc_searches + mobile_searches < 10:
+            print(f"   ⚠️ [{raw_data.get('relKeyword', '')}] 검색량 부족 ({pc_searches + mobile_searches}) - API 데이터 무효")
+            return None
 
         return {
             "keyword": raw_data.get("relKeyword", ""),

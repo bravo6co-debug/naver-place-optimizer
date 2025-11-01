@@ -102,6 +102,16 @@ class SearchVolumeEstimatorService:
                 stats = self.search_ad_api.get_keyword_stats([keyword])
                 if stats and len(stats) > 0:
                     parsed = self.search_ad_api.parse_keyword_data(stats[0])
+
+                    # parse_keyword_data가 None을 반환하면 (적은검색량 등) 실패 처리
+                    if parsed is None:
+                        if attempt == 0 and retry:
+                            print(f"   [{keyword}] 적은검색량으로 파싱 실패, 재시도 중...")
+                            continue
+                        else:
+                            print(f"   [{keyword}] 적은검색량 - API 데이터 사용 불가")
+                            return None
+
                     if attempt > 0:
                         print(f"   [{keyword}] API 재시도 성공 ({attempt + 1}회차)")
                     return parsed
