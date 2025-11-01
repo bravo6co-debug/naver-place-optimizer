@@ -84,6 +84,34 @@ class UnifiedKeywordEngine:
             specialty=specialty
         )
 
+    async def prefetch_api_data(self, keywords_data: List[Dict], location: str, category: str):
+        """
+        Level 1-2 키워드의 API 데이터를 배치로 미리 가져오기
+
+        Args:
+            keywords_data: 생성된 키워드 리스트
+            location: 지역
+            category: 업종
+        """
+        # Level 1-2 키워드만 추출
+        level12_keywords = [kw["keyword"] for kw in keywords_data if kw["level"] <= 2]
+
+        if not level12_keywords:
+            return
+
+        print(f"🚀 배치 API 호출: Level 1-2 키워드 {len(level12_keywords)}개")
+
+        # 배치 API 호출
+        stats_list = self.volume_estimator.search_ad_api.get_keyword_stats(level12_keywords)
+
+        # 결과를 캐시에 저장
+        for stat in stats_list:
+            parsed = self.volume_estimator.search_ad_api.parse_keyword_data(stat)
+            if parsed:
+                keyword = parsed["keyword"]
+                self.volume_estimator._batch_cache[keyword] = parsed
+                print(f"   ✅ 캐시 저장: {keyword}")
+
     async def analyze_keyword(
         self,
         keyword: str,

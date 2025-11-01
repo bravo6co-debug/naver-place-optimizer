@@ -241,20 +241,31 @@ async def strategic_analysis(request: StrategicAnalysisRequest):
             request.specialty
         )
 
-        # 2. 각 키워드 분석
-        analyzed_keywords = []
-        for kw_data in keywords_data:
-            metrics = await engine.analyze_keyword(
+        # 1.5. Level 1-2 키워드 API 데이터 배치 호출 (사전 캐싱)
+        await engine.prefetch_api_data(keywords_data, request.location, request.business_type)
+
+        # 2. 각 키워드 분석 (병렬 처리)
+        analysis_tasks = [
+            engine.analyze_keyword(
                 kw_data['keyword'],
                 kw_data['level'],
                 request.location,
                 request.business_type
             )
+            for kw_data in keywords_data
+        ]
 
-            analyzed_keywords.append({
+        # 병렬 실행
+        metrics_results = await asyncio.gather(*analysis_tasks)
+
+        # 결과 조합
+        analyzed_keywords = [
+            {
                 "metrics": metrics,
                 "reason": kw_data.get('reason', '')
-            })
+            }
+            for metrics, kw_data in zip(metrics_results, keywords_data)
+        ]
 
         # 3. 레벨별로 그룹화
         keywords_by_level = {

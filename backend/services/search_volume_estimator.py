@@ -14,6 +14,7 @@ class SearchVolumeEstimatorService:
     def __init__(self, search_ad_api: Optional[NaverSearchAdAPI] = None):
         self.search_ad_api = search_ad_api or NaverSearchAdAPI()
         self.category_loader = CategoryLoader()
+        self._batch_cache = {}  # 배치 API 호출 결과 캐시
 
     async def estimate_monthly_searches(
         self,
@@ -89,12 +90,17 @@ class SearchVolumeEstimatorService:
 
     def _get_from_api(self, keyword: str, retry: bool = False) -> Optional[Dict]:
         """
-        검색광고 API에서 데이터 가져오기
+        검색광고 API에서 데이터 가져오기 (캐시 우선)
 
         Args:
             keyword: 검색 키워드
             retry: Level 1-2 키워드는 True로 설정하여 재시도
         """
+        # 캐시 확인 (배치 호출 결과)
+        if keyword in self._batch_cache:
+            print(f"   ✅ [{keyword}] 캐시된 API 데이터 사용")
+            return self._batch_cache[keyword]
+
         max_attempts = 2 if retry else 1
 
         for attempt in range(max_attempts):

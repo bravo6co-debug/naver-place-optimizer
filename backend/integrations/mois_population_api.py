@@ -9,6 +9,7 @@ import httpx
 import xml.etree.ElementTree as ET
 from typing import Dict, Optional
 from datetime import datetime, timedelta
+from functools import lru_cache
 
 
 class MOISPopulationAPI:
@@ -304,6 +305,7 @@ DEFAULT_POPULATION = {
 }
 
 
+@lru_cache(maxsize=256)
 def get_region_population(region: str, api_key: Optional[str] = None) -> tuple[int, str]:
     """
     지역 인구 조회 (로컬 데이터 우선, API는 폴백) + 데이터 소스 반환
@@ -320,6 +322,7 @@ def get_region_population(region: str, api_key: Optional[str] = None) -> tuple[i
         - 1차: DEFAULT_POPULATION (146개 지역, < 1ms) → A급
         - 2차: MOIS API (타임아웃 3초) → A급
         - 3차: 기본값 300,000 → B~F급 (인구 규모별 차등)
+        - @lru_cache: 동일 지역 반복 조회 시 캐시 사용
     """
     # 1차: 로컬 데이터 우선 (즉시 응답) - A급
     if region in DEFAULT_POPULATION:
