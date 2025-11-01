@@ -154,8 +154,12 @@ class OpenAIAPI:
    → 구체적 위치 + "에서" 조사 + 목적("먹기 좋은") + 분위기
 ✅ "부산 중구 혼자 가기 좋은 떡볶이집 추천"
    → 자연스러운 어순, 조사 생략 가능, 구어체
+✅ "서울 강남구 안과 주말 진료 잘하는 병원" (specialty=안과)
+   → specialty "안과"를 정확히 포함, 다른 전문분야 사용 안함
 ❌ "강남역 브런치 카페 추천 베스트 맛집"
    → 조사 없음, 키워드만 나열, 부자연스러움
+❌ "서울 강남구 안과 치료 잘보는 **피부과**" (specialty=안과인데 피부과 사용)
+   → specialty에 없는 다른 전문분야 사용, 절대 금지!
 
 [Good Example - Level 4 니치]
 ✅ "경성대 근처 가성비 좋은 분식당"
@@ -200,8 +204,11 @@ Level 1: "부산 돼지갈비 맛집"
      포장/배달, 리뷰/평점, 데이트/가족/회식 중 최소 각 1회 이상 반영.
    - 조사 생략·구어체·숫자(24시)·붙여쓰기/띄어쓰기 변형 허용(가성비좋은/가성비 좋은).
 
-3) 특성 주입:
-   - specialty가 제공된 경우: 모든 Level의 키워드는 specialty 항목 중 최소 1개 이상 반드시 포함.
+3) 특성 주입 (CRITICAL - 절대 규칙):
+   - specialty가 제공된 경우:
+     * **모든 Level의 모든 키워드**는 specialty 항목 중 **정확히 1개 이상 반드시 포함**
+     * **specialty에 없는 다른 전문분야 절대 사용 금지**
+     * 예: specialty="안과"인 경우 → "피부과", "내과", "예방접종" 등 다른 전문분야 사용 금지
    - specialty가 없는 경우: 업종 일반 강점(맛있는/잘하는/가성비/조용한 등) 사용.
 
 4) 안전/정책:
@@ -224,13 +231,14 @@ Level 1: "부산 돼지갈비 맛집"
 
 **Level 5 (롱테일 - 가장 쉬움) - 15개:**
 - 자연스러운 구체적 검색어 (3-7단어, 유연하게)
-- {f'특징({", ".join(specialty_list)}) 포함 권장 (60% 이상)' if specialty_list else '구체적 목적/상황/대상 조합'}
+- {f'⚠️ CRITICAL: 반드시 특징({", ".join(specialty_list)}) 중 1개 이상 포함! (60% 이상 = 15개 중 9개 이상)' if specialty_list else '구체적 목적/상황/대상 조합'}
 - 조사 적극 사용, 질문형 가능 ("어디?", "추천해요")
 - 다양한 구조 예시:
-  * "{location}에서 {specialty} 먹기 좋은 {category}"
-  * "{location} {specialty} {category} 중에 분위기 좋은 곳은?"
-  * "{specialty} 전문 {location} {category} 추천"
-- 예: "{location}에서 {specialty_list[0] if specialty_list else category} 데이트하기 좋은 곳"
+  * "{location}에서 {specialty} 잘하는 {category}"
+  * "{location} {specialty} 치료 추천 {category}"
+  * "{location} {specialty} {category} 주말 진료"
+{f'- ✅ 올바른 예 (specialty={specialty_list[0] if specialty_list else ""}): "{location}에서 {specialty_list[0] if specialty_list else ""} 잘보는 {category}", "{location} {specialty_list[0] if specialty_list else ""} 전문 {category}"' if specialty_list else ''}
+{f'- ❌ 잘못된 예: "{location}에서 **다른전문분야** 잘보는 {category}" (specialty에 없는 전문분야 사용 금지!)' if specialty_list else ''}
 
 **Level 4 (니치) - 10개:**
 - 자연스러운 니치 검색어 (2-5단어, 유연하게)
