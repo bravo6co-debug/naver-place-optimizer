@@ -120,44 +120,89 @@ def get_level_name(level: int) -> str:
 
 def get_confidence_level(metrics: KeywordMetrics) -> str:
     """
-    키워드 신뢰도 등급
+    키워드 신뢰도 등급 (Level + data_source 조합)
 
-    S급: 검색광고 API 실제 데이터 (월간검색수 + 경쟁정도)
-    A급: 정부 통계 실제 데이터 (요식업 전용)
-    B~F급: 추정 데이터 기반 난이도
+    등급 체계:
+    - S급: Level 1 (최상위 키워드) + API 데이터
+    - A급: Level 2 (경쟁 키워드) + API 데이터 OR Level 1-2 + Restaurant Stats
+    - B급: Level 3 (중간 키워드) + API/Stats OR Level 1-2 + 추정
+    - C급: Level 4 (니치 키워드) + API/Stats OR Level 3 + 추정
+    - D급: Level 5 (롱테일) + API/Stats OR Level 4 + 추정
+    - E급: Level 5 + 추정 (경쟁도 낮음)
+    - F급: Level 5 + 추정 (경쟁도 매우 낮음)
+
+    핵심 원칙:
+    1. Level이 낮을수록(1에 가까울수록) 높은 등급
+    2. data_source가 좋을수록(api > restaurant_stats > estimated) 높은 등급
+    3. 같은 조건에서는 경쟁도/난이도로 세부 구분
     """
-    # ✅ S급: 검색광고 API 데이터 (최고 신뢰도)
-    if metrics.data_source == "api":
-        # 경쟁도에 따라 세분화
-        if metrics.competition_score >= 80:  # "높음" (85점)
+
+    # ========== S급: Level 1 + API 데이터 ==========
+    if metrics.level == 1 and metrics.data_source == "api":
+        # 최상위 키워드 + 최고 신뢰도 데이터
+        if metrics.competition_score >= 80:
+            return "S급 - 초고경쟁"
+        elif metrics.competition_score >= 60:
             return "S급 - 고경쟁"
-        elif metrics.competition_score >= 55:  # "중간" (60점)
-            return "S급 - 중경쟁"
-        else:  # "낮음" (30점)
-            return "S급 - 저경쟁"
-
-    # ✅ A급: 정부 통계 CSV 데이터 (요식업 전용, 실제 경쟁도)
-    if metrics.data_source == "restaurant_stats":
-        if metrics.competition_score >= 70:
-            return "A급 - 높음"
-        elif metrics.competition_score >= 40:
-            return "A급 - 중간"
         else:
-            return "A급 - 낮음"
+            return "S급 - 중경쟁"
 
-    # B~F급: 추정 데이터 기반 (난이도 점수)
-    avg_score = (metrics.competition_score + metrics.difficulty_score) / 2
+    # ========== A급: Level 2 + API OR Level 1-2 + Restaurant Stats ==========
+    if (metrics.level == 2 and metrics.data_source == "api") or \
+       (metrics.level in [1, 2] and metrics.data_source == "restaurant_stats"):
+        if metrics.competition_score >= 75:
+            return "A급 - 고경쟁"
+        elif metrics.competition_score >= 50:
+            return "A급 - 중경쟁"
+        else:
+            return "A급 - 저경쟁"
 
-    if avg_score >= 80:
-        return "B급"  # 매우 어려움
-    elif avg_score >= 60:
-        return "C급"  # 어려움
-    elif avg_score >= 40:
-        return "D급"  # 중간
-    elif avg_score >= 20:
-        return "E급"  # 쉬움
-    else:
-        return "F급"  # 매우 쉬움
+    # ========== B급: Level 3 + API/Stats OR Level 1-2 + 추정 ==========
+    if (metrics.level == 3 and metrics.data_source in ["api", "restaurant_stats"]) or \
+       (metrics.level in [1, 2] and metrics.data_source == "estimated"):
+        avg_score = (metrics.competition_score + metrics.difficulty_score) / 2
+        if avg_score >= 70:
+            return "B급 - 높음"
+        elif avg_score >= 45:
+            return "B급 - 중간"
+        else:
+            return "B급 - 낮음"
+
+    # ========== C급: Level 4 + API/Stats OR Level 3 + 추정 ==========
+    if (metrics.level == 4 and metrics.data_source in ["api", "restaurant_stats"]) or \
+       (metrics.level == 3 and metrics.data_source == "estimated"):
+        avg_score = (metrics.competition_score + metrics.difficulty_score) / 2
+        if avg_score >= 60:
+            return "C급 - 높음"
+        elif avg_score >= 35:
+            return "C급 - 중간"
+        else:
+            return "C급 - 낮음"
+
+    # ========== D급: Level 5 + API/Stats OR Level 4 + 추정 ==========
+    if (metrics.level == 5 and metrics.data_source in ["api", "restaurant_stats"]) or \
+       (metrics.level == 4 and metrics.data_source == "estimated"):
+        avg_score = (metrics.competition_score + metrics.difficulty_score) / 2
+        if avg_score >= 50:
+            return "D급 - 중간"
+        elif avg_score >= 25:
+            return "D급 - 낮음"
+        else:
+            return "D급 - 매우낮음"
+
+    # ========== E급: Level 5 + 추정 (경쟁도 낮음) ==========
+    if metrics.level == 5 and metrics.data_source == "estimated":
+        avg_score = (metrics.competition_score + metrics.difficulty_score) / 2
+        if avg_score >= 30:
+            return "E급 - 중간"
+        elif avg_score >= 15:
+            return "E급 - 낮음"
+        else:
+            # 15점 미만은 F급으로 강등
+            return "F급 - 최저경쟁"
+
+    # ========== F급: 폴백 (예상 밖 케이스) ==========
+    return "F급 - 미분류"
 
 
 # ========== API 엔드포인트 ==========
