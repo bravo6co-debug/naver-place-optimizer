@@ -13,6 +13,7 @@ from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass
 from enum import Enum
 import httpx
+from integrations.mois_population_api import get_region_population
 from tenacity import retry, stop_after_attempt, wait_exponential
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -178,15 +179,7 @@ class StrategicKeywordEngine:
         }
     }
 
-    # 지역 인구 데이터 (주요 지역만, 실제로는 DB 또는 API 사용)
-    POPULATION_DATA = {
-        "서울 강남구": 560000,
-        "서울 서초구": 420000,
-        "서울 송파구": 660000,
-        "서울 강북구": 320000,
-        "부산 해운대구": 410000,
-        "부산 부산진구": 380000,
-    }
+    # 지역 인구 데이터는 MOIS API 사용 (integrations/mois_population_api.py 참조)
 
     def __init__(self, openai_api_key: Optional[str] = None, naver_client_id: Optional[str] = None, naver_client_secret: Optional[str] = None):
         self.openai_api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
@@ -200,8 +193,8 @@ class StrategicKeywordEngine:
 
     def estimate_monthly_searches(self, location: str, category: str) -> int:
         """지역 인구 기반 월간 검색량 추정"""
-        # 인구 데이터 조회
-        population = self.POPULATION_DATA.get(location, 100000)  # 기본값 10만
+        # 인구 데이터 조회 (MOIS API 사용)
+        population = get_region_population(location)  # API로 실시간 조회
 
         # 업종 데이터 조회
         cat_data = self.CATEGORY_DATA.get(category, {
@@ -552,7 +545,7 @@ JSON 형식으로 반환:
 
         phases = []
 
-        # Phase 1: 롱테일 킬러 (1-2주)
+        # Phase 1: 롱테일 킬러 (1-2주) - Level 5 (V5 Simplified)
         phases.append(StrategyPhase(
             phase=1,
             name="롱테일 킬러",
@@ -560,10 +553,10 @@ JSON 형식으로 반환:
             target_level=5,
             target_keywords_count=15,
             strategies=[
-                "소개글에 롱테일 키워드 자연스럽게 삽입",
-                "메뉴명에 검색 키워드 활용",
-                "사진 설명(alt)에 키워드 포함",
-                "초기 리뷰 10개 확보"
+                "✅ [최우선] 영수증 리뷰 100개 확보: 현장 POP/QR 코드 리뷰 유도",
+                "✅ [핵심] 롱테일 키워드 3개 이상 리뷰에 자연스럽게 삽입",
+                "✅ [품질] 리뷰 기준: 텍스트 50자+ / 사진 2장+ / 키워드 3개+",
+                "✅ [최신성] 주 7개 이상 신규 리뷰 유입 (공백 없이 꾸준히)"
             ],
             goals=[
                 "각 키워드 Top 3 달성",
@@ -573,7 +566,7 @@ JSON 형식으로 반환:
             expected_daily_visitors=int(gap * 0.15)
         ))
 
-        # Phase 2: 니치 공략 (3-8주)
+        # Phase 2: 니치 공략 (3-8주) - Level 4 (V5 Simplified)
         phases.append(StrategyPhase(
             phase=2,
             name="니치 공략",
@@ -581,10 +574,10 @@ JSON 형식으로 반환:
             target_level=4,
             target_keywords_count=10,
             strategies=[
-                "블로그/SNS 연계 포스팅",
-                "특화 메뉴 개발 및 홍보",
-                "이벤트/프로모션 진행",
-                "리뷰 50개 돌파"
+                "✅ [최우선] 영수증 리뷰 300개 확보 (주 10개 목표)",
+                "✅ [핵심] 롱테일 키워드 4개 이상 리뷰에 자연스럽게 삽입",
+                "✅ [품질] 리뷰 기준: 텍스트 80자+ / 사진 3장+ / 키워드 4개+",
+                "✅ [정보신뢰도] 플레이스 정보 완성도 100% 유지 (주 1회 점검)"
             ],
             goals=[
                 "각 키워드 Top 5 진입",
@@ -594,7 +587,7 @@ JSON 형식으로 반환:
             expected_daily_visitors=int(gap * 0.35)
         ))
 
-        # Phase 3: 중위권 진입 (3-6개월)
+        # Phase 3: 중위권 진입 (3-6개월) - Level 3 (V5 Simplified)
         phases.append(StrategyPhase(
             phase=3,
             name="중위권 진입",
@@ -602,10 +595,10 @@ JSON 형식으로 반환:
             target_level=3,
             target_keywords_count=5,
             strategies=[
-                "리뷰 100개 이상 확보",
-                "정기 업데이트 (주 2회)",
-                "지역 커뮤니티 활동",
-                "입소문 마케팅 강화"
+                "✅ [최우선] 영수증 리뷰 999개 확보 (주 15개 목표)",
+                "✅ [핵심] 롱테일 키워드 5개 이상 리뷰에 자연스럽게 삽입",
+                "✅ [품질] 리뷰 기준: 텍스트 100자+ / 사진 4장+ / 키워드 5개+",
+                "✅ [최신성] 매일 2개 이상 신규 리뷰 유입 (공백 없이 꾸준히)"
             ],
             goals=[
                 "각 키워드 Top 10 안착",
@@ -615,7 +608,7 @@ JSON 형식으로 반환:
             expected_daily_visitors=int(gap * 0.70)
         ))
 
-        # Phase 4: 상위권 도전 (6개월+)
+        # Phase 4: 상위권 도전 (6개월+) - Level 2 (V5 Simplified)
         phases.append(StrategyPhase(
             phase=4,
             name="상위권 도전",
@@ -623,17 +616,38 @@ JSON 형식으로 반환:
             target_level=2,
             target_keywords_count=3,
             strategies=[
-                "브랜드 인지도 강화",
-                "프리미엄 서비스 차별화",
-                "미디어 노출 (기사, 방송)",
-                "충성 고객 커뮤니티 운영"
+                "✅ [최우선] 영수증 리뷰 999개 유지 + 월별 유입 지속",
+                "✅ [핵심] 중단위 키워드에 집중 (5개 이상 리뷰에 삽입)",
+                "✅ [품질] 리뷰 기준: 텍스트 150자+ / 사진 5장+ / 키워드 5개+",
+                "✅ [최신성] 매일 3개 이상 신규 리뷰 유입 (꾸준함이 핵심)"
             ],
             goals=[
                 "지역 대표 업체로 인식",
-                "리뷰 500개 이상",
+                "리뷰 999개 유지",
                 "매출 안정화"
             ],
             expected_daily_visitors=gap
+        ))
+
+        # Phase 5: 최상위 (1년+) - Level 1 (V5 Simplified)
+        phases.append(StrategyPhase(
+            phase=5,
+            name="최상위",
+            duration="1년 이상",
+            target_level=1,
+            target_keywords_count=2,
+            strategies=[
+                "✅ [최우선] 영수증 리뷰 2000개 이상 확보",
+                "✅ [핵심] 단어 키워드 공략 (10개 이상 리뷰에 삽입)",
+                "✅ [품질] 리뷰 기준: 텍스트 200자+ / 사진 5장+ / 키워드 10개+",
+                "✅ [최신성] 매일 5개 이상 신규 리뷰 유입 (지속성 유지)"
+            ],
+            goals=[
+                "지역 1위 업체 확립",
+                "리뷰 2000개 이상",
+                "브랜드 인지도 극대화"
+            ],
+            expected_daily_visitors=int(gap * 1.5)
         ))
 
         return phases
