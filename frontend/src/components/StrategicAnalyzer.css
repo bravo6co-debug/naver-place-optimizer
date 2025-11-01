@@ -50,6 +50,12 @@
   font-size: 0.9em;
 }
 
+.input-group label .required {
+  color: #ef4444;
+  font-weight: bold;
+  margin-left: 2px;
+}
+
 .input-group input,
 .input-group select {
   padding: 10px 12px;

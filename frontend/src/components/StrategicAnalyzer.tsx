@@ -219,6 +219,11 @@ function StrategicAnalyzer() {
       return
     }
 
+    if (!specialty || !specialty.trim()) {
+      setError('특징을 입력해주세요 (예: 브런치 전문, 24시간, 한방 치료 등)')
+      return
+    }
+
     setLoading(true)
     setError('')
     setResult(null)
@@ -313,13 +318,14 @@ function StrategicAnalyzer() {
           </div>
 
           <div className="input-group">
-            <label>특징 (선택)</label>
+            <label>특징 <span className="required">*</span></label>
             <input
               type="text"
               value={specialty}
               onChange={(e) => setSpecialty(e.target.value)}
-              placeholder="브런치 전문, 24시간"
+              placeholder="브런치 전문, 24시간 (필수)"
               disabled={loading}
+              required
             />
           </div>
         </div>
