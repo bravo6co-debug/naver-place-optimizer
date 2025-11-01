@@ -48,16 +48,19 @@ class MOISPopulationAPI:
 
             city, district = parts
 
-            # API 호출
+            # API 호출 (공공데이터포털 표준 파라미터)
+            # 인코딩된 키를 디코딩하여 params로 전달 (httpx가 자동으로 재인코딩)
+            import urllib.parse
+            decoded_key = urllib.parse.unquote_plus(self.api_key)
+
             params = {
-                "serviceKey": self.api_key,
+                "serviceKey": decoded_key,  # 디코딩된 키 사용 (소문자 s로 시도)
                 "pageNo": "1",
-                "numOfRows": "1000",
-                "type": "xml"
+                "numOfRows": "1000"
             }
 
             response = httpx.get(
-                f"{self.BASE_URL}/getRegistrationPopulationByRegionService",
+                f"{self.BASE_URL}/getRegistrationPopulationByRegion",
                 params=params,
                 timeout=10.0
             )
