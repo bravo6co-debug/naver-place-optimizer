@@ -1,0 +1,18 @@
+# Backend files (Railway에서만 사용)
+backend/
+requirements.txt
+nixpacks.toml
+railway.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Environment
+.env
+.env.local
+.env.*.local
