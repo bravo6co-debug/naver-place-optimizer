@@ -636,18 +636,18 @@ JSON 형식으로 반환:
 
         phases = []
 
-        # Phase 1: 롱테일 킬러 (1-2주) - Level 5 (V5 Simplified)
+        # Phase 1: 롱테일 킬러 (1개월) - Level 5 (V5 Simplified)
         phases.append(StrategyPhase(
             phase=1,
             name="롱테일 킬러",
-            duration="1-2주",
+            duration="1개월",
             target_level=5,
             target_keywords_count=15,
             strategies=[
-                "✅ [최우선] 영수증 리뷰 100개 확보: 현장 POP/QR 코드 리뷰 유도",
+                "✅ [최우선] 영수증 리뷰 50개 확보: 현장 POP/QR 코드 리뷰 유도",
                 "✅ [핵심] 롱테일 키워드 3개 이상 리뷰에 자연스럽게 삽입",
                 "✅ [품질] 리뷰 기준: 텍스트 50자+ / 사진 2장+ / 키워드 3개+",
-                "✅ [최신성] 주 7개 이상 신규 리뷰 유입 (공백 없이 꾸준히)"
+                "✅ [최신성] 일 1-2개 신규 리뷰 유입 (공백 없이 꾸준히)"
             ],
             goals=[
                 "각 키워드 Top 3 달성",
