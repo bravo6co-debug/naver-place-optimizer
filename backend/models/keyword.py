@@ -30,6 +30,9 @@ class KeywordMetrics:
     estimated_traffic: int  # 예상 일방문자 수
     conversion_rate: float  # 예상 전환율
 
+    # 데이터 소스 추적 (S/A/B~F 등급 시스템)
+    data_source: str = "estimated"  # "api", "restaurant_stats", "estimated"
+
     # 네이버 검색광고 API 데이터 (선택적)
     monthly_pc_searches: Optional[int] = None
     monthly_mobile_searches: Optional[int] = None

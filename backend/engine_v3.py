@@ -16,7 +16,7 @@ from enum import Enum
 from dotenv import load_dotenv
 
 # 새로운 모듈 임포트
-from models.keyword import KeywordMetrics as KeywordMetricsModel
+from models.keyword import KeywordMetrics, KeywordLevel
 from models.strategy import StrategyPhase as StrategyPhaseModel
 from services.keyword_generator import KeywordGeneratorService
 from services.search_volume_estimator import SearchVolumeEstimatorService
@@ -30,37 +30,9 @@ from config.category_loader import CategoryLoader
 load_dotenv()
 
 
-# 레거시 호환성을 위한 클래스 (strategic_keyword_engine.py와 동일)
-class KeywordLevel(Enum):
-    """키워드 난이도 5단계"""
-    LEVEL_5_LONGTAIL = 5
-    LEVEL_4_NICHE = 4
-    LEVEL_3_MEDIUM = 3
-    LEVEL_2_COMPETITIVE = 2
-    LEVEL_1_TOP = 1
-
-
-@dataclass
-class KeywordMetrics:
-    """키워드 지표 (레거시 호환)"""
-    keyword: str
-    level: int
-    estimated_monthly_searches: int
-    competition_score: int
-    naver_result_count: int
-    difficulty_score: int
-    recommended_rank_target: str
-    estimated_timeline: str
-    estimated_traffic: int
-    conversion_rate: float
-    # V3 추가 필드
-    data_source: str = "estimated"  # "api", "naver_local", "estimated"
-    monthly_pc_searches: Optional[int] = None
-    monthly_mobile_searches: Optional[int] = None
-
-
-# StrategyPhase는 models.strategy에서 import (Line 19의 StrategyPhaseModel 사용)
-# 레거시 호환성을 위해 별칭 생성
+# 레거시 호환성을 위한 별칭
+# KeywordMetrics, KeywordLevel은 models.keyword에서 import됨 (Line 19)
+# StrategyPhase는 models.strategy에서 import됨 (Line 20)
 StrategyPhase = StrategyPhaseModel
 
 
@@ -77,7 +49,7 @@ class UnifiedKeywordEngine:
         # 서비스
         self.keyword_generator = KeywordGeneratorService(self.openai_api)
         self.volume_estimator = SearchVolumeEstimatorService(self.search_ad_api)
-        self.competition_analyzer = CompetitionAnalyzerService(self.local_api, self.search_ad_api)
+        self.competition_analyzer = CompetitionAnalyzerService(self.search_ad_api)
         self.strategy_planner = StrategyPlannerService()
 
         # 설정 로더
