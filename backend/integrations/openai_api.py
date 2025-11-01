@@ -54,11 +54,36 @@ class OpenAIAPI:
             )
 
             content = response.choices[0].message.content
-            return self._parse_json_response(content)
+            keywords = self._parse_json_response(content)
+
+            # specialty 포함 여부 검증 (경고만 표시, 키워드는 유지)
+            if specialty:
+                keywords = self.validate_specialty_inclusion(keywords, specialty)
+
+            return keywords
 
         except Exception as e:
             print(f"OpenAI API 호출 실패: {e}")
             return []
+
+    def _get_level2_examples(self, location: str, category: str, specialty_list: list) -> str:
+        """Level 2 키워드 예시 생성"""
+        base_location = location.split()[0] if " " in location else location
+
+        if specialty_list:
+            return f'"{base_location} {specialty_list[0]} 맛집", "{base_location} {specialty_list[0]}"'
+        else:
+            return f'"{base_location} {category}"'
+
+    def _get_level1_examples(self, location: str, category: str, specialty_list: list) -> str:
+        """Level 1 키워드 예시 생성"""
+        base_location = location.split()[0] if " " in location else location
+
+        if specialty_list:
+            second_specialty = specialty_list[1] if len(specialty_list) > 1 else specialty_list[0]
+            return f'"{base_location} {specialty_list[0]}", "{base_location} {second_specialty}"'
+        else:
+            return f'"{base_location} {category}"'
 
     def _build_keyword_prompt(
         self,
@@ -111,7 +136,9 @@ class OpenAIAPI:
 ⚠️ **특징이 제공되지 않았습니다.** 업종의 일반적인 차별화 요소를 고려하여 키워드를 생성하세요.
 """
 
-        prompt = f"""당신은 네이버 플레이스 검색 최적화 전문가입니다. 실제 사용자들이 검색하는 자연스러운 키워드를 생성해주세요.
+        prompt = f"""당신은 네이버 플레이스 로컬 서치 최적화 전문가입니다.
+입력은 오직 3개입니다: category(업종), location(지역), specialty(특성: 콤마 구분).
+이 3개만으로, 실제 모바일 검색에서 자주 쓰일 한국어 키워드 34개를 생성하세요.
 
 📍 **기본 정보**
 업종: {category}
@@ -119,11 +146,24 @@ class OpenAIAPI:
 {specialty_emphasis}
 {modifier_examples if modifier_examples else ''}
 
-🔍 **검색 의도 반영 요소**
-- 목적 (데이트, 회식, 공부, 운동 등)
-- 시간대 (아침, 점심, 저녁, 야간 등)
-- 대상 (혼자, 가족, 친구, 연인 등)
-- 상황 (기념일, 비오는날, 주말, 평일 등)
+[내부 자동 추론 규칙 – 모델이 스스로 수행]
+1) 지리 계층 확장:
+   - location을 광역/구·동/상권/역세권으로 분해/변형.
+   - 잘 알려진 상권·역 이름을 location에서 자연스럽게 축약(예: "부산 수영구 대연동"→"부산","수영구","대연동","경성대").
+   - “근처/역/역세권/사거리/로데오” 같은 일반화 표현을 일부 혼합.
+
+2) 의도 버킷 채우기(균형 분포):
+   - 가격/가성비, 좌석/룸/단체, 주차/대중교통 접근, 영업시간/야간/24시, 예약/대기,
+     포장/배달, 리뷰/평점, 데이트/가족/회식 중 최소 각 1회 이상 반영.
+   - 조사 생략·구어체·숫자(24시)·붙여쓰기/띄어쓰기 변형 허용(가성비좋은/가성비 좋은).
+
+3) 특성 주입:
+   - specialty가 제공된 경우: 모든 Level의 키워드는 specialty 항목 중 최소 1개 이상 반드시 포함.
+   - specialty가 없는 경우: 업종 일반 강점(맛있는/잘하는/가성비/조용한 등) 사용.
+
+4) 안전/정책:
+   - 채용/알바/무료/과도한 할인율 등 정책 리스크 표현 제외.
+   - 중복 패턴 과다 반복 금지(동일 접두/접미 2회 초과 불가).
 
 📊 **5단계 난이도별 키워드 생성**
 
@@ -145,14 +185,14 @@ class OpenAIAPI:
 **Level 2 (경쟁) - 2개:**
 - 핵심 키워드 (2-3단어)
 - {f'광역 지역 + 특징({", ".join(specialty_list)}) 필수!' if specialty_list else '광역 지역 + 업종'}
-- 예: {f'"{location.split()[0] if " " in location else location} {specialty_list[0]} 맛집", "{location.split()[0] if " " in location else location} {specialty_list[0]}"' if specialty_list else f'"{location.split()[0] if " " in location else location} {category}"'}
-- ❌ 절대 금지: "{location.split()[0] if ' ' in location else location} {category}" (specialty 있을 때)
+- 예: {self._get_level2_examples(location, category, specialty_list)}
+- ❌ 절대 금지: 특징 누락 (specialty 있을 때)
 
 **Level 1 (최상위 - 가장 어려움) - 2개:**
 - 초경쟁 키워드 (1-2단어)
 - {f'광역 지역 + 특징({", ".join(specialty_list)}) 필수!' if specialty_list else '광역 지역 + 업종'}
-- 예: {f'"{location.split()[0] if " " in location else location} {specialty_list[0]}", "{location.split()[0] if " " in location else location} {specialty_list[1] if len(specialty_list) > 1 else specialty_list[0]}"' if specialty_list else f'"{location.split()[0] if " " in location else location} {category}"'}
-- ❌ 절대 금지: "{location.split()[0] if ' ' in location else location} {category}" (specialty 있을 때)
+- 예: {self._get_level1_examples(location, category, specialty_list)}
+- ❌ 절대 금지: 특징 누락 (specialty 있을 때)
 
 ⚠️ **반드시 지켜야 할 규칙:**
 1. Level 1-5 모두 특징(specialty)이 있으면 **필수**로 포함 (특히 Level 1-2는 specialty만 사용!)
@@ -184,3 +224,41 @@ class OpenAIAPI:
         except Exception as e:
             print(f"JSON 파싱 실패: {e}")
             return []
+
+    def validate_specialty_inclusion(
+        self,
+        keywords: List[Dict],
+        specialty: Optional[str]
+    ) -> List[Dict]:
+        """
+        specialty가 제공된 경우 키워드에 포함 여부 검증
+
+        Args:
+            keywords: 생성된 키워드 리스트
+            specialty: 특징/전문분야
+
+        Returns:
+            검증된 키워드 리스트 (경고 포함)
+        """
+        if not specialty:
+            return keywords
+
+        specialty_list = [s.strip() for s in specialty.split(',') if s.strip()]
+        if not specialty_list:
+            return keywords
+
+        validated = []
+        for kw in keywords:
+            keyword_text = kw.get('keyword', '')
+            level = kw.get('level', 5)
+
+            # specialty 포함 여부 확인
+            has_specialty = any(spec.lower() in keyword_text.lower() for spec in specialty_list)
+
+            if not has_specialty and level <= 3:
+                # Level 1-3는 specialty 필수
+                print(f"⚠️ [specialty 누락] Level {level} 키워드 '{keyword_text}'에 특징({', '.join(specialty_list)}) 누락")
+
+            validated.append(kw)
+
+        return validated
