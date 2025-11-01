@@ -96,9 +96,8 @@ interface AnalysisResult {
   }
 }
 
-const BUSINESS_TYPES = [
-  '음식점', '카페', '미용실', '병원', '학원', '헬스장', '직접 입력'
-]
+// 업종 예시 (placeholder용)
+const BUSINESS_TYPE_EXAMPLES = '음식점, 카페, 미용실, 병원, 학원, 헬스장, 네일샵, 편의점, 부동산 등'
 
 const INITIAL_ANALYSIS_STEPS: AnalysisStep[] = [
   {
@@ -145,8 +144,6 @@ const INITIAL_ANALYSIS_STEPS: AnalysisStep[] = [
 
 function StrategicAnalyzer() {
   const [businessType, setBusinessType] = useState('')
-  const [customBusinessType, setCustomBusinessType] = useState('')
-  const [showCustomInput, setShowCustomInput] = useState(false)
   const [location, setLocation] = useState('')
   const [specialty, setSpecialty] = useState('')
   const [currentVisitors, setCurrentVisitors] = useState(50)
@@ -195,27 +192,14 @@ function StrategicAnalyzer() {
     return () => clearInterval(interval)
   }, [loading])
 
-  const handleBusinessTypeChange = (value: string) => {
-    setBusinessType(value)
-    if (value === '직접 입력') {
-      setShowCustomInput(true)
-      setCustomBusinessType('')
-    } else {
-      setShowCustomInput(false)
-      setCustomBusinessType('')
-    }
-  }
-
   const handleAnalyze = async () => {
-    const finalBusinessType = showCustomInput ? customBusinessType : businessType
-
-    if (!finalBusinessType || !location) {
-      setError('업종과 위치를 모두 입력해주세요')
+    if (!businessType || !businessType.trim()) {
+      setError('업종을 입력해주세요')
       return
     }
 
-    if (showCustomInput && !customBusinessType.trim()) {
-      setError('업종을 직접 입력해주세요')
+    if (!location || !location.trim()) {
+      setError('위치를 입력해주세요')
       return
     }
 
@@ -230,9 +214,9 @@ function StrategicAnalyzer() {
 
     try {
       const response = await axios.post('/api/v2/analyze', {
-        business_type: finalBusinessType,
-        location: location,
-        specialty: specialty || null,
+        business_type: businessType.trim(),
+        location: location.trim(),
+        specialty: specialty.trim() || null,
         current_daily_visitors: currentVisitors,
         target_daily_visitors: targetVisitors
       })
@@ -280,31 +264,14 @@ function StrategicAnalyzer() {
         <div className="input-row">
           <div className="input-group">
             <label>업종</label>
-            <select
+            <input
+              type="text"
               value={businessType}
-              onChange={(e) => handleBusinessTypeChange(e.target.value)}
+              onChange={(e) => setBusinessType(e.target.value)}
+              placeholder={`예: ${BUSINESS_TYPE_EXAMPLES}`}
               disabled={loading}
-            >
-              <option value="">선택하세요</option>
-              {BUSINESS_TYPES.map(type => (
-                <option key={type} value={type}>{type}</option>
-              ))}
-            </select>
+            />
           </div>
-
-          {showCustomInput && (
-            <div className="input-group">
-              <label>업종 직접 입력</label>
-              <input
-                type="text"
-                value={customBusinessType}
-                onChange={(e) => setCustomBusinessType(e.target.value)}
-                placeholder="예: 네일샵, 편의점, 부동산"
-                disabled={loading}
-                autoFocus
-              />
-            </div>
-          )}
 
           <div className="input-group">
             <label>위치</label>
