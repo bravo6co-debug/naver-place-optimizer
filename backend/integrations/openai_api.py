@@ -143,17 +143,19 @@ class OpenAIAPI:
 - 예: "{location} {specialty_list[0] if specialty_list else '맛있는'} {category}"
 
 **Level 2 (경쟁) - 3개:**
-- 핵심 키워드 (2단어)
-- {f'광역 지역 + 특징({specialty_list[0]})' if specialty_list else '광역 지역 + 업종/특징'}
-- 예: "{location.split()[0] if ' ' in location else location} {specialty_list[0] if specialty_list else category}"
+- 핵심 키워드 (2-3단어)
+- {f'광역 지역 + 특징({", ".join(specialty_list)}) 필수!' if specialty_list else '광역 지역 + 업종'}
+- 예: {f'"{location.split()[0] if " " in location else location} {specialty_list[0]} 맛집", "{location.split()[0] if " " in location else location} {specialty_list[0]}"' if specialty_list else f'"{location.split()[0] if " " in location else location} {category}"'}
+- ❌ 절대 금지: "{location.split()[0] if ' ' in location else location} {category}" (specialty 있을 때)
 
 **Level 1 (최상위 - 가장 어려움) - 2개:**
 - 초경쟁 키워드 (1-2단어)
-- 광역 지역 + 업종
-- 예: "{location.split()[0] if ' ' in location else location} {category}"
+- {f'광역 지역 + 특징({", ".join(specialty_list)}) 필수!' if specialty_list else '광역 지역 + 업종'}
+- 예: {f'"{location.split()[0] if " " in location else location} {specialty_list[0]}", "{location.split()[0] if " " in location else location} {specialty_list[1] if len(specialty_list) > 1 else specialty_list[0]}"' if specialty_list else f'"{location.split()[0] if " " in location else location} {category}"'}
+- ❌ 절대 금지: "{location.split()[0] if ' ' in location else location} {category}" (specialty 있을 때)
 
 ⚠️ **반드시 지켜야 할 규칙:**
-1. Level 5, 4, 3에서는 특징을 **필수**로 포함 (여러 특징 중 최소 1개 이상)
+1. Level 1-5 모두 특징(specialty)이 있으면 **필수**로 포함 (특히 Level 1-2는 specialty만 사용!)
 2. 모든 키워드는 실제 사용자가 검색할 법한 자연스러운 표현 사용
 3. 동일한 패턴 반복 금지 (특징 조합을 다양하게 사용)
 
