@@ -104,10 +104,13 @@ class UnifiedKeywordEngine:
             KeywordMetrics 객체
         """
         # 1. 검색량 추정 (다단계 폴백)
+        # ✅ Level 1-2는 API 우선 (재시도 활성화)
         volume_data = await self.volume_estimator.estimate_monthly_searches(
             keyword=keyword,
             category=category,
-            location=location
+            location=location,
+            level=level,
+            force_api=(level <= 2)  # ✅ Level 1-2는 API 재시도 활성화
         )
 
         # 레벨별 검색량 조정
@@ -115,11 +118,13 @@ class UnifiedKeywordEngine:
         estimated_searches = self.volume_estimator.apply_level_multiplier(base_searches, level)
 
         # 2. 경쟁도 분석 (location, category, level 전달)
+        # ✅ Level 1-2만 네이버 검색 결과 조회, Level 3-5는 생략
         competition_data = await self.competition_analyzer.analyze_competition(
             keyword=keyword,
             location=location,
             category=category,
-            level=level  # ✅ 키워드 레벨 전달
+            level=level,  # ✅ 키워드 레벨 전달
+            fetch_naver_results=(level <= 2)  # ✅ Level 1-2만 네이버 결과 조회
         )
 
         # 3. 난이도 점수 계산

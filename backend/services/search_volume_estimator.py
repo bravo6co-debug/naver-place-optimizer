@@ -19,13 +19,22 @@ class SearchVolumeEstimatorService:
         self,
         keyword: str,
         category: str,
-        location: str
+        location: str,
+        level: int = 3,  # ✅ 키워드 레벨 추가
+        force_api: bool = False  # ✅ Level 1-2는 API 재시도 강화
     ) -> Dict:
         """
         검색량 추정 (다단계)
 
         Level 1: 네이버 검색광고 API (실제 데이터)
         Level 2: 지역 인구 기반 추정 (폴백)
+
+        Args:
+            keyword: 검색 키워드
+            category: 업종
+            location: 지역
+            level: 키워드 레벨 (1-5)
+            force_api: Level 1-2는 True로 설정하여 API 우선 시도
 
         Returns:
             {
@@ -35,8 +44,8 @@ class SearchVolumeEstimatorService:
                 "source": "api" or "estimated"
             }
         """
-        # Level 1: 검색광고 API 시도
-        api_data = self._get_from_api(keyword)
+        # ✅ Level 1-2: API 우선 (재시도 1회)
+        api_data = self._get_from_api(keyword, retry=force_api)
         if api_data:
             print(f"✅ [{keyword}] 검색광고 API 데이터 사용: {api_data['monthly_total_searches']:,}회/월")
             return {
@@ -56,17 +65,34 @@ class SearchVolumeEstimatorService:
             "source": "estimated"
         }
 
-    def _get_from_api(self, keyword: str) -> Optional[Dict]:
-        """검색광고 API에서 데이터 가져오기"""
-        try:
-            stats = self.search_ad_api.get_keyword_stats([keyword])
-            if stats and len(stats) > 0:
-                parsed = self.search_ad_api.parse_keyword_data(stats[0])
-                return parsed
-            else:
-                print(f"   [{keyword}] API 응답 없음 (빈 리스트)")
-        except Exception as e:
-            print(f"   [{keyword}] 검색광고 API 호출 실패: {e}")
+    def _get_from_api(self, keyword: str, retry: bool = False) -> Optional[Dict]:
+        """
+        검색광고 API에서 데이터 가져오기
+
+        Args:
+            keyword: 검색 키워드
+            retry: Level 1-2 키워드는 True로 설정하여 재시도
+        """
+        max_attempts = 2 if retry else 1
+
+        for attempt in range(max_attempts):
+            try:
+                stats = self.search_ad_api.get_keyword_stats([keyword])
+                if stats and len(stats) > 0:
+                    parsed = self.search_ad_api.parse_keyword_data(stats[0])
+                    if attempt > 0:
+                        print(f"   [{keyword}] API 재시도 성공 ({attempt + 1}회차)")
+                    return parsed
+                else:
+                    if attempt == 0 and retry:
+                        print(f"   [{keyword}] API 응답 없음, 재시도 중...")
+                    else:
+                        print(f"   [{keyword}] API 응답 없음 (빈 리스트)")
+            except Exception as e:
+                if attempt == 0 and retry:
+                    print(f"   [{keyword}] API 호출 실패, 재시도 중... ({e})")
+                else:
+                    print(f"   [{keyword}] 검색광고 API 호출 실패: {e}")
 
         return None
 

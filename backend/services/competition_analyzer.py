@@ -23,7 +23,8 @@ class CompetitionAnalyzerService:
         keyword: str,
         location: str = "",
         category: str = "",
-        level: int = 3  # ✅ 추가: 키워드 레벨 (1-5)
+        level: int = 3,  # ✅ 추가: 키워드 레벨 (1-5)
+        fetch_naver_results: bool = True  # ✅ Level 1-2만 상세 조회
     ) -> Dict:
         """
         키워드 경쟁도 분석 (우선순위: 검색광고 API → CSV 통계 → 추정)
@@ -33,6 +34,7 @@ class CompetitionAnalyzerService:
             location: 지역 (예: "서울 강남구")
             category: 업종 (예: "카페", "음식점")
             level: 키워드 레벨 (1-5, 낮을수록 경쟁적)
+            fetch_naver_results: Level 1-2만 True (상세 조회), Level 3-5는 False (간소화)
 
         Returns:
             {
@@ -42,7 +44,38 @@ class CompetitionAnalyzerService:
                 "data_source": 데이터 소스 ("api", "restaurant_stats", "estimated")
             }
         """
-        # ✅ 1차: 검색광고 API 우선 시도
+        # ✅ Level 3-5는 간소화된 분석 (API 호출 스킵)
+        if not fetch_naver_results:
+            # CSV 통계 우선 → 추정치 폴백 (API 호출 안함)
+            if category and location:
+                if self.restaurant_stats.is_supported_category(category):
+                    stats_data = self.restaurant_stats.get_competition(location)
+                    if stats_data:
+                        base_competition = int(stats_data["경쟁강도_0to100"])
+                        adjusted_competition = self._adjust_competition_by_keyword(
+                            base_competition, keyword, level
+                        )
+                        return {
+                            "result_count": 0,  # Level 3-5는 결과 수 생략
+                            "competition_score": adjusted_competition,
+                            "competition_level": self._score_to_level(adjusted_competition),
+                            "data_source": "restaurant_stats"
+                        }
+
+            # 최종 폴백: 추정치
+            base_estimated = self._estimate_competition(location, category)
+            adjusted_estimated = self._adjust_competition_by_keyword(
+                base_estimated, keyword, level
+            )
+            return {
+                "result_count": 0,
+                "competition_score": adjusted_estimated,
+                "competition_level": self._score_to_level(adjusted_estimated),
+                "data_source": "estimated"
+            }
+
+        # ✅ Level 1-2: 상세 분석 (API 호출 포함)
+        # 1차: 검색광고 API 우선 시도
         ad_data = await self._get_ad_competition_data(keyword)
 
         if ad_data and "competition_level" in ad_data:
@@ -55,7 +88,7 @@ class CompetitionAnalyzerService:
                 "data_source": "api"  # ✅ 최고 등급 (S급)
             }
 
-        # ✅ 2차: 요식업 CSV 통계 데이터 (음식점/카페) + 키워드 조정
+        # 2차: 요식업 CSV 통계 데이터 (음식점/카페) + 키워드 조정
         if category and location:
             if self.restaurant_stats.is_supported_category(category):
                 stats_data = self.restaurant_stats.get_competition(location)
@@ -75,7 +108,7 @@ class CompetitionAnalyzerService:
                         "data_source": "restaurant_stats"  # ✅ A급 (정부 통계)
                     }
 
-        # ✅ 3차: 인구 기반 추정 (최후 폴백) + 키워드 조정
+        # 3차: 인구 기반 추정 (최후 폴백) + 키워드 조정
         base_estimated = self._estimate_competition(location, category)
         adjusted_estimated = self._adjust_competition_by_keyword(
             base_estimated, keyword, level

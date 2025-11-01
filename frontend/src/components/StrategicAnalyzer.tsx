@@ -512,9 +512,11 @@ function StrategicAnalyzer() {
                             <div className="target-timeline">
                               기간: <strong>{kw.estimated_timeline}</strong>
                             </div>
-                            <div className="target-traffic">
-                              예상: <strong>+{kw.estimated_daily_traffic}명/일</strong>
-                            </div>
+                            {kw.estimated_daily_traffic > 0 && (
+                              <div className="target-traffic">
+                                예상: <strong>+{kw.estimated_daily_traffic}명/일</strong>
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
