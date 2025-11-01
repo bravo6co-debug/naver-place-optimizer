@@ -470,8 +470,12 @@ function StrategicAnalyzer() {
                           <div className="keyword-header">
                             <h4>{kw.keyword}</h4>
                             <span className="confidence-badge" style={{
-                              background: kw.confidence.includes('A') ? '#10b981' :
-                                          kw.confidence.includes('B') ? '#f59e0b' : '#ef4444'
+                              background: kw.confidence.includes('S') ? '#8b5cf6' :  // Purple (최고 등급 - API 데이터)
+                                          kw.confidence.includes('A') ? '#ef4444' :  // Red (가장 어려움)
+                                          kw.confidence.includes('B') ? '#f97316' :  // Dark Orange
+                                          kw.confidence.includes('C') ? '#f59e0b' :  // Orange
+                                          kw.confidence.includes('D') ? '#84cc16' :  // Light Green
+                                          '#10b981'  // Green (가장 쉬움 - E급)
                             }}>
                               {kw.confidence}
                             </span>
