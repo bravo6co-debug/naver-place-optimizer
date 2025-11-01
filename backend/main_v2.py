@@ -3,6 +3,7 @@
 """
 네이버 플레이스 최적화 서비스 - FastAPI 백엔드 V3
 전략적 키워드 분석 시스템 - 검색광고 API 통합
+Updated: 2025-11-01 - CORS fix deployed
 """
 
 from fastapi import FastAPI, HTTPException
