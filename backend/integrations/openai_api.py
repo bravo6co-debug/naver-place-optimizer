@@ -142,7 +142,7 @@ class OpenAIAPI:
 - {f'지역 + 특징({", ".join(specialty_list)}) + 업종' if specialty_list else '지역 + 특징 + 업종'}
 - 예: "{location} {specialty_list[0] if specialty_list else '맛있는'} {category}"
 
-**Level 2 (경쟁) - 3개:**
+**Level 2 (경쟁) - 2개:**
 - 핵심 키워드 (2-3단어)
 - {f'광역 지역 + 특징({", ".join(specialty_list)}) 필수!' if specialty_list else '광역 지역 + 업종'}
 - 예: {f'"{location.split()[0] if " " in location else location} {specialty_list[0]} 맛집", "{location.split()[0] if " " in location else location} {specialty_list[0]}"' if specialty_list else f'"{location.split()[0] if " " in location else location} {category}"'}
@@ -165,7 +165,7 @@ class OpenAIAPI:
   ...
 ]
 
-총 35개의 키워드를 생성해주세요."""
+총 34개의 키워드를 생성해주세요."""
 
         return prompt
 

@@ -57,7 +57,45 @@ class KeywordGeneratorService:
             # 커스텀 업종이고 GPT도 실패한 경우 - 기본 키워드 생성
             keywords = self._generate_generic_keywords(category, location, specialty)
 
+        # ✅ Level별 키워드 개수 제한 (GPT가 초과 생성하는 경우 필터링)
+        keywords = self._limit_keywords_per_level(keywords)
+
         return keywords
+
+    def _limit_keywords_per_level(self, keywords: List[Dict]) -> List[Dict]:
+        """
+        Level별 키워드 개수 제한
+
+        Args:
+            keywords: 키워드 리스트
+
+        Returns:
+            제한된 키워드 리스트
+        """
+        level_limits = {
+            5: 15,  # 롱테일
+            4: 10,  # 니치
+            3: 5,   # 중간
+            2: 2,   # 경쟁
+            1: 2    # 최상위
+        }
+
+        # Level별로 그룹화
+        keywords_by_level = {}
+        for kw in keywords:
+            level = kw.get("level", 3)
+            if level not in keywords_by_level:
+                keywords_by_level[level] = []
+            keywords_by_level[level].append(kw)
+
+        # Level별 제한 적용
+        limited_keywords = []
+        for level in [5, 4, 3, 2, 1]:
+            if level in keywords_by_level:
+                limit = level_limits[level]
+                limited_keywords.extend(keywords_by_level[level][:limit])
+
+        return limited_keywords
 
     def _build_modifier_examples(self, modifiers: Dict) -> str:
         """수식어 예시 문자열 생성"""
@@ -206,39 +244,55 @@ class KeywordGeneratorService:
                     "reason": "중간 키워드"
                 })
 
-        # Level 2 - 경쟁 (3개) - specialty 우선 반영
+        # Level 2 - 경쟁 (2개) - specialty 우선 반영
         if specialty_list:
-            # specialty 있으면 specialty 기반 Level 2
+            # specialty 있으면 specialty 기반 Level 2 (2개만)
             if len(location_parts) >= 2:
-                for spec in specialty_list[:3]:
-                    keywords.append({
-                        "keyword": f"{location_parts[0]} {spec} 맛집",
-                        "level": 2,
-                        "reason": f"광역 + specialty({spec}) 경쟁"
-                    })
+                keywords.append({
+                    "keyword": f"{location_parts[0]} {specialty_list[0]} 맛집",
+                    "level": 2,
+                    "reason": f"광역 + specialty({specialty_list[0]}) 경쟁"
+                })
+                keywords.append({
+                    "keyword": f"{location_parts[0]} {specialty_list[1] if len(specialty_list) > 1 else specialty_list[0]}",
+                    "level": 2,
+                    "reason": f"광역 + specialty 경쟁"
+                })
             else:
-                for spec in specialty_list[:3]:
-                    keywords.append({
-                        "keyword": f"{location} {spec}",
-                        "level": 2,
-                        "reason": f"지역 + specialty({spec}) 경쟁"
-                    })
+                keywords.append({
+                    "keyword": f"{location} {specialty_list[0]}",
+                    "level": 2,
+                    "reason": f"지역 + specialty({specialty_list[0]}) 경쟁"
+                })
+                keywords.append({
+                    "keyword": f"{location} {specialty_list[1] if len(specialty_list) > 1 else specialty_list[0]} 맛집",
+                    "level": 2,
+                    "reason": f"specialty 맛집"
+                })
         else:
-            # specialty 없으면 기존 로직
+            # specialty 없으면 기존 로직 (2개만)
             if len(location_parts) >= 2:
-                for base in base_keywords[:3]:
-                    keywords.append({
-                        "keyword": f"{location_parts[0]} {base}",
-                        "level": 2,
-                        "reason": "광역 경쟁 키워드"
-                    })
+                keywords.append({
+                    "keyword": f"{location_parts[0]} {base_keywords[0]}",
+                    "level": 2,
+                    "reason": "광역 경쟁 키워드"
+                })
+                keywords.append({
+                    "keyword": f"{location_parts[0]} {base_keywords[1] if len(base_keywords) > 1 else base_keywords[0]}",
+                    "level": 2,
+                    "reason": "광역 경쟁 키워드"
+                })
             else:
-                for base in base_keywords[:3]:
-                    keywords.append({
-                        "keyword": f"{location} {base}",
-                        "level": 2,
-                        "reason": "경쟁 키워드"
-                    })
+                keywords.append({
+                    "keyword": f"{location} {base_keywords[0]}",
+                    "level": 2,
+                    "reason": "경쟁 키워드"
+                })
+                keywords.append({
+                    "keyword": f"{location} {base_keywords[1] if len(base_keywords) > 1 else base_keywords[0]}",
+                    "level": 2,
+                    "reason": "경쟁 키워드"
+                })
 
         # Level 1 - 최상위 (2개) - specialty 필수 반영
         if specialty_list:
@@ -393,35 +447,30 @@ class KeywordGeneratorService:
                 {"keyword": f"{location} {category} 예약", "level": 3, "reason": "예약 키워드"}
             ])
 
-        # Level 2 - 경쟁 (3개) - specialty 우선 반영
+        # Level 2 - 경쟁 (2개) - specialty 우선 반영
         if specialty_list:
-            # specialty 있으면 specialty 기반 Level 2
-            specs_for_level2 = specialty_list * 2  # 3개 키워드에 충분하도록 반복
+            # specialty 있으면 specialty 기반 Level 2 (2개만)
             if len(location_parts) >= 2:
                 keywords.extend([
-                    {"keyword": f"{location_parts[0]} {specs_for_level2[0]} 맛집", "level": 2, "reason": f"광역 + '{specs_for_level2[0]}' 경쟁"},
-                    {"keyword": f"{location_parts[0]} {specs_for_level2[1]}", "level": 2, "reason": f"광역 + '{specs_for_level2[1]}' 경쟁"},
-                    {"keyword": f"{location_parts[0]} {specs_for_level2[2]} 추천", "level": 2, "reason": f"광역 + '{specs_for_level2[2]}' 추천"}
+                    {"keyword": f"{location_parts[0]} {specialty_list[0]} 맛집", "level": 2, "reason": f"광역 + '{specialty_list[0]}' 경쟁"},
+                    {"keyword": f"{location_parts[0]} {specialty_list[1] if len(specialty_list) > 1 else specialty_list[0]}", "level": 2, "reason": f"광역 + specialty 경쟁"}
                 ])
             else:
                 keywords.extend([
-                    {"keyword": f"{location} {specs_for_level2[0]}", "level": 2, "reason": f"지역 + '{specs_for_level2[0]}' 경쟁"},
-                    {"keyword": f"{location} {specs_for_level2[1]} 맛집", "level": 2, "reason": f"'{specs_for_level2[1]}' 맛집"},
-                    {"keyword": f"{location} {specs_for_level2[2]} 추천", "level": 2, "reason": f"'{specs_for_level2[2]}' 추천"}
+                    {"keyword": f"{location} {specialty_list[0]}", "level": 2, "reason": f"지역 + '{specialty_list[0]}' 경쟁"},
+                    {"keyword": f"{location} {specialty_list[1] if len(specialty_list) > 1 else specialty_list[0]} 맛집", "level": 2, "reason": f"specialty 맛집"}
                 ])
         else:
-            # specialty 없으면 기존 로직 (category 사용)
+            # specialty 없으면 기존 로직 (category 사용, 2개만)
             if len(location_parts) >= 2:
                 keywords.extend([
                     {"keyword": f"{location_parts[0]} {category}", "level": 2, "reason": "광역 경쟁 키워드"},
-                    {"keyword": f"{location_parts[0]} {category} 추천", "level": 2, "reason": "광역 추천 키워드"},
-                    {"keyword": f"{location_parts[0]} {category} 잘하는곳", "level": 2, "reason": "광역 품질 키워드"}
+                    {"keyword": f"{location_parts[0]} {category} 추천", "level": 2, "reason": "광역 추천 키워드"}
                 ])
             else:
                 keywords.extend([
                     {"keyword": f"{location} {category} 유명한", "level": 2, "reason": "경쟁 키워드"},
-                    {"keyword": f"{location} {category} 인기", "level": 2, "reason": "경쟁 키워드"},
-                    {"keyword": f"{location} {category} 베스트", "level": 2, "reason": "경쟁 키워드"}
+                    {"keyword": f"{location} {category} 인기", "level": 2, "reason": "경쟁 키워드"}
                 ])
 
         # Level 1 - 최상위 (2개) - specialty 필수 반영
