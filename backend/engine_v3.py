@@ -144,20 +144,25 @@ class UnifiedKeywordEngine:
         estimated_daily_traffic = int((estimated_searches / 30) * conversion)
 
         # 6. 최종 데이터 등급 결정 (검색량 vs 경쟁도 중 낮은 등급 선택)
-        # 등급 우선순위: api(S) > restaurant_stats(A) > estimated(B~F)
+        # 등급 우선순위: api(S) > restaurant_stats(A) > estimated(B) > estimated_b~f(C~F)
         volume_source = volume_data["source"]
         competition_source = competition_data["data_source"]
 
         # 두 소스 중 신뢰도가 낮은 것을 최종 등급으로 설정
         source_priority = {
-            "api": 3,
-            "restaurant_stats": 2,
-            "restaurant_stats_fallback": 2,
-            "estimated": 1
+            "api": 6,                      # S급 (검색광고 API)
+            "restaurant_stats": 5,          # A급 (정부 통계)
+            "restaurant_stats_fallback": 5, # A급 (폴백)
+            "estimated": 4,                 # B급 (추정 - 실제 인구)
+            "estimated_b": 3,               # C급 (추정 - 50만+ 인구)
+            "estimated_c": 2,               # D급 (추정 - 20~50만 인구)
+            "estimated_d": 1,               # E급 (추정 - 10~20만 인구)
+            "estimated_e": 0,               # F급 (추정 - 5~10만 인구)
+            "estimated_f": 0                # F급 (추정 - 5만 미만 인구)
         }
 
-        volume_priority = source_priority.get(volume_source, 1)
-        competition_priority = source_priority.get(competition_source, 1)
+        volume_priority = source_priority.get(volume_source, 0)
+        competition_priority = source_priority.get(competition_source, 0)
 
         # 낮은 등급을 최종 data_source로 선택
         if volume_priority < competition_priority:

@@ -4,7 +4,7 @@
 
 from typing import Optional, Dict
 from integrations.naver_search_ad_api import NaverSearchAdAPI
-from integrations.mois_population_api import get_region_population
+from integrations.mois_population_api import get_region_population, get_population_grade
 from config.category_loader import CategoryLoader
 
 
@@ -68,13 +68,13 @@ class SearchVolumeEstimatorService:
             }
 
         # Level 2-5: 인구 기반 추정
-        estimated = self._estimate_from_population(location, category)
-        print(f"⚠️ [{keyword}] API 데이터 없음 → 추정치 사용: {estimated:,}회/월")
+        estimated, grade = self._estimate_from_population(location, category)
+        print(f"⚠️ [{keyword}] API 데이터 없음 → 추정치 사용: {estimated:,}회/월 (등급: {grade})")
         return {
             "total": estimated,
             "pc": int(estimated * 0.3),  # PC 30%
             "mobile": int(estimated * 0.7),  # 모바일 70%
-            "source": "estimated"
+            "source": grade  # 인구 기반 등급 (estimated, estimated_b ~ estimated_f)
         }
 
     def _get_from_api(self, keyword: str, retry: bool = False) -> Optional[Dict]:
@@ -108,9 +108,15 @@ class SearchVolumeEstimatorService:
 
         return None
 
-    def _estimate_from_population(self, location: str, category: str) -> int:
-        """지역 인구 기반 추정 (MOIS API 통합)"""
-        population = get_region_population(location)
+    def _estimate_from_population(self, location: str, category: str) -> tuple[int, str]:
+        """
+        지역 인구 기반 추정 (MOIS API 통합) + 데이터 소스 반환
+
+        Returns:
+            (검색량, 데이터 소스)
+            데이터 소스: "estimated_b" ~ "estimated_f" (인구 규모별)
+        """
+        population, pop_source = get_region_population(location)
 
         cat_data = self.category_loader.get_category(category)
         if not cat_data:
@@ -125,7 +131,15 @@ class SearchVolumeEstimatorService:
         # 공식: 인구 × 이용률 × 검색률 / 12
         monthly_searches = int(population * usage_rate * search_rate / 12)
 
-        return monthly_searches
+        # 인구 기반 등급 결정 (B~F급)
+        if pop_source == "population_estimated":
+            # 추정 인구인 경우 인구 규모에 따라 등급 세분화
+            grade = get_population_grade(population)
+        else:
+            # 실제 인구 데이터인 경우 "estimated"로 반환 (호출자가 B급으로 처리)
+            grade = "estimated"
+
+        return monthly_searches, grade
 
     def apply_level_multiplier(self, base_searches: int, level: int) -> int:
         """

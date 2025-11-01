@@ -5,7 +5,7 @@
 from typing import Optional, Dict
 from integrations.naver_search_ad_api import NaverSearchAdAPI
 from integrations.restaurant_stats_loader import get_restaurant_stats_loader
-from integrations.mois_population_api import get_region_population
+from integrations.mois_population_api import get_region_population, get_population_grade
 
 
 class CompetitionAnalyzerService:
@@ -63,7 +63,7 @@ class CompetitionAnalyzerService:
                         }
 
             # 최종 폴백: 추정치
-            base_estimated = self._estimate_competition(location, category)
+            base_estimated, grade = self._estimate_competition(location, category)
             adjusted_estimated = self._adjust_competition_by_keyword(
                 base_estimated, keyword, level
             )
@@ -71,7 +71,7 @@ class CompetitionAnalyzerService:
                 "result_count": 0,
                 "competition_score": adjusted_estimated,
                 "competition_level": self._score_to_level(adjusted_estimated),
-                "data_source": "estimated"
+                "data_source": grade  # 인구 기반 등급 (estimated, estimated_b ~ estimated_f)
             }
 
         # ✅ Level 1-2: 상세 분석 (API 호출 포함)
@@ -124,7 +124,7 @@ class CompetitionAnalyzerService:
             }
 
         # 3차: 인구 기반 추정 (Level 2-5만 허용)
-        base_estimated = self._estimate_competition(location, category)
+        base_estimated, grade = self._estimate_competition(location, category)
         adjusted_estimated = self._adjust_competition_by_keyword(
             base_estimated, keyword, level
         )
@@ -133,7 +133,7 @@ class CompetitionAnalyzerService:
             "result_count": 0,  # 추정값
             "competition_score": adjusted_estimated,
             "competition_level": self._score_to_level(adjusted_estimated),
-            "data_source": "estimated"  # ✅ B급 (Level 2), C~F급 (Level 3-5)
+            "data_source": grade  # ✅ 인구 기반 등급 (estimated, estimated_b ~ estimated_f)
         }
 
     async def _get_ad_competition_data(self, keyword: str) -> Dict:
@@ -204,22 +204,23 @@ class CompetitionAnalyzerService:
 
         return result
 
-    def _estimate_competition(self, location: str, category: str) -> int:
+    def _estimate_competition(self, location: str, category: str) -> tuple[int, str]:
         """
-        인구 기반 경쟁도 추정
+        인구 기반 경쟁도 추정 + 데이터 소스 반환
 
         Args:
             location: 지역명
             category: 업종
 
         Returns:
-            경쟁도 점수 (0-100)
+            (경쟁도 점수, 데이터 소스)
+            데이터 소스: "estimated_b" ~ "estimated_f" (인구 규모별)
         """
         if not location:
-            return 50  # 기본값
+            return 50, "estimated"  # 기본값
 
         # 인구 기반 추정
-        population = get_region_population(location)
+        population, pop_source = get_region_population(location)
 
         # 인구별 경쟁도 추정 (간단한 휴리스틱)
         if population >= 500000:  # 50만 이상
@@ -233,7 +234,15 @@ class CompetitionAnalyzerService:
         else:  # 5만 미만
             base_score = 70
 
-        return base_score
+        # 인구 기반 등급 결정 (B~F급)
+        if pop_source == "population_estimated":
+            # 추정 인구인 경우 인구 규모에 따라 등급 세분화
+            grade = get_population_grade(population)
+        else:
+            # 실제 인구 데이터인 경우 "estimated"로 반환 (호출자가 B급으로 처리)
+            grade = "estimated"
+
+        return base_score, grade
 
     def _level_to_score(self, level: str) -> int:
         """

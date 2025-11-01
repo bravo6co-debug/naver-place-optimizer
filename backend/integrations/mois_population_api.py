@@ -304,33 +304,63 @@ DEFAULT_POPULATION = {
 }
 
 
-def get_region_population(region: str, api_key: Optional[str] = None) -> int:
+def get_region_population(region: str, api_key: Optional[str] = None) -> tuple[int, str]:
     """
-    지역 인구 조회 (로컬 데이터 우선, API는 폴백)
+    지역 인구 조회 (로컬 데이터 우선, API는 폴백) + 데이터 소스 반환
 
     Args:
         region: 지역명 (예: "서울 강남구")
         api_key: MOIS API 키 (선택)
 
     Returns:
-        인구 수
+        (인구 수, 데이터 소스)
+        데이터 소스: "population_db" (A급), "population_api" (A급), "population_estimated" (B~F급)
 
     성능 최적화:
-        - 1차: DEFAULT_POPULATION (146개 지역, < 1ms)
-        - 2차: MOIS API (타임아웃 3초)
-        - 3차: 기본값 300,000
+        - 1차: DEFAULT_POPULATION (146개 지역, < 1ms) → A급
+        - 2차: MOIS API (타임아웃 3초) → A급
+        - 3차: 기본값 300,000 → B~F급 (인구 규모별 차등)
     """
-    # 1차: 로컬 데이터 우선 (즉시 응답)
+    # 1차: 로컬 데이터 우선 (즉시 응답) - A급
     if region in DEFAULT_POPULATION:
-        return DEFAULT_POPULATION[region]
+        return DEFAULT_POPULATION[region], "population_db"
 
-    # 2차: API 시도 (로컬에 없는 경우만)
+    # 2차: API 시도 (로컬에 없는 경우만) - A급
     if api_key or os.getenv("MOIS_API_KEY"):
         api = MOISPopulationAPI(api_key)
         population = api.get_population(region)
         if population is not None:
-            return population
+            return population, "population_api"
 
-    # 3차: 기본값 (중소도시 평균)
+    # 3차: 기본값 (중소도시 평균) - B~F급 (추정)
     print(f"⚠️ {region} 인구 데이터 없음 → 기본값 300,000 사용")
-    return 300000
+    return 300000, "population_estimated"
+
+
+def get_population_grade(population: int) -> str:
+    """
+    인구 규모 기반 데이터 등급 반환
+
+    Args:
+        population: 인구 수
+
+    Returns:
+        등급: "B", "C", "D", "E", "F"
+
+    등급 기준:
+        - B급: 50만 이상 (대도시)
+        - C급: 20만~50만 (중도시)
+        - D급: 10만~20만 (소도시)
+        - E급: 5만~10만 (군 지역)
+        - F급: 5만 미만 (소규모)
+    """
+    if population >= 500000:
+        return "estimated_b"  # 대도시
+    elif population >= 200000:
+        return "estimated_c"  # 중도시
+    elif population >= 100000:
+        return "estimated_d"  # 소도시
+    elif population >= 50000:
+        return "estimated_e"  # 군 지역
+    else:
+        return "estimated_f"  # 소규모
