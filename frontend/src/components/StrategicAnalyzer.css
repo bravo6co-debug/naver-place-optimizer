@@ -892,18 +892,11 @@
 
 .info-trust-strategy li {
   padding: 10px 0;
-  padding-left: 32px;
+  padding-left: 0;
   position: relative;
   color: #666;
   font-size: 0.95em;
   line-height: 1.6;
-}
-
-.info-trust-strategy li::before {
-  content: "✅";
-  position: absolute;
-  left: 0;
-  font-size: 1.2em;
 }
 
 /* 반응형 디자인 */
