@@ -225,13 +225,14 @@ async def strategic_analysis(request: StrategicAnalysisRequest):
 
             keywords_by_level[level_key].append(keyword_response)
 
-        # 4. 전략 로드맵 생성 (V4: 키워드 데이터 전달)
+        # 4. 전략 로드맵 생성 (V4: 키워드 데이터 전달 + specialty 우선순위)
         keyword_metrics_list = [item['metrics'] for item in analyzed_keywords]
         roadmap = engine.generate_strategy_roadmap(
             request.current_daily_visitors,
             request.target_daily_visitors,
             request.business_type,
-            analyzed_keywords=keyword_metrics_list  # V4 추가
+            analyzed_keywords=keyword_metrics_list,  # V4 추가
+            specialty=request.specialty  # specialty 키워드 우선 배치
         )
 
         roadmap_response = []

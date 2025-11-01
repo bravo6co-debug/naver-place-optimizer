@@ -196,7 +196,8 @@ class UnifiedKeywordEngine:
         current_daily_visitors: int,
         target_daily_visitors: int,
         category: str,
-        analyzed_keywords: Optional[List[KeywordMetrics]] = None
+        analyzed_keywords: Optional[List[KeywordMetrics]] = None,
+        specialty: Optional[str] = None
     ) -> List[StrategyPhase]:
         """
         전략 로드맵 생성 (레거시 호환 메서드)
@@ -206,6 +207,7 @@ class UnifiedKeywordEngine:
             target_daily_visitors: 목표 일방문자
             category: 업종
             analyzed_keywords: 분석된 키워드 목록 (V4+)
+            specialty: 특징/전문분야 (specialty 포함 키워드 우선)
 
         Returns:
             StrategyPhase 리스트
@@ -214,7 +216,8 @@ class UnifiedKeywordEngine:
             current_daily_visitors=current_daily_visitors,
             target_daily_visitors=target_daily_visitors,
             category=category,
-            analyzed_keywords=analyzed_keywords
+            analyzed_keywords=analyzed_keywords,
+            specialty=specialty
         )
 
         # StrategyPhase는 이제 models.strategy.StrategyPhase의 별칭이므로 변환 불필요

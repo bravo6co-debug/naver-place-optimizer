@@ -37,7 +37,8 @@ class StrategyPlannerService:
         current_daily_visitors: int,
         target_daily_visitors: int,
         category: str,
-        analyzed_keywords: Optional[List[KeywordMetrics]] = None
+        analyzed_keywords: Optional[List[KeywordMetrics]] = None,
+        specialty: Optional[str] = None
     ) -> List[StrategyPhase]:
         """
         목표 기반 전략 로드맵 생성 (V4: 동적 생성)
@@ -47,6 +48,7 @@ class StrategyPlannerService:
             target_daily_visitors: 목표 일방문자
             category: 업종
             analyzed_keywords: 분석된 키워드 리스트 (V4 신규)
+            specialty: 특징/전문분야 (specialty 포함 키워드 우선 선정)
 
         Returns:
             전략 단계 리스트
@@ -55,7 +57,7 @@ class StrategyPlannerService:
 
         # 키워드 분석 데이터가 있으면 동적 생성, 없으면 레거시 방식
         if analyzed_keywords:
-            return self._generate_dynamic_roadmap(gap, category, analyzed_keywords)
+            return self._generate_dynamic_roadmap(gap, category, analyzed_keywords, specialty)
         else:
             return self._generate_legacy_roadmap(gap, category)
 
@@ -63,7 +65,8 @@ class StrategyPlannerService:
         self,
         gap: int,
         category: str,
-        analyzed_keywords: List[KeywordMetrics]
+        analyzed_keywords: List[KeywordMetrics],
+        specialty: Optional[str] = None
     ) -> List[StrategyPhase]:
         """
         실제 키워드 분석 결과 기반 동적 로드맵 생성
@@ -114,8 +117,8 @@ class StrategyPlannerService:
             level_traffic = sum(kw.estimated_traffic for kw in level_keywords)
             cumulative_traffic += level_traffic
 
-            # 우선순위 키워드 선정 (난이도 대비 효과 높은 순)
-            priority_kws = self._select_priority_keywords(level_keywords, top_n=5)
+            # 우선순위 키워드 선정 (난이도 대비 효과 높은 순 + specialty 우선)
+            priority_kws = self._select_priority_keywords(level_keywords, top_n=5, specialty=specialty)
 
             # 키워드별 트래픽 분해
             traffic_breakdown = {
@@ -299,14 +302,16 @@ class StrategyPlannerService:
     def _select_priority_keywords(
         self,
         keywords: List[KeywordMetrics],
-        top_n: int = 5
+        top_n: int = 5,
+        specialty: Optional[str] = None
     ) -> List[KeywordMetrics]:
         """
-        우선순위 키워드 선정 (ROI 기반)
+        우선순위 키워드 선정 (ROI 기반 + specialty 우선)
 
         Args:
             keywords: 키워드 리스트
             top_n: 선정할 개수
+            specialty: 특징 (specialty 포함 키워드 우선 선정)
 
         Returns:
             우선순위 키워드 리스트
@@ -315,6 +320,11 @@ class StrategyPlannerService:
         scored_keywords = []
         for kw in keywords:
             roi = kw.estimated_traffic / max(kw.difficulty_score, 1)
+
+            # specialty 포함 시 ROI 가중치 부여 (2배)
+            if specialty and specialty in kw.keyword:
+                roi *= 2.0
+
             scored_keywords.append((kw, roi))
 
         # ROI 높은 순으로 정렬
