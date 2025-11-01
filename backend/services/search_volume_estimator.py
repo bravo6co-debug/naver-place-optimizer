@@ -55,7 +55,19 @@ class SearchVolumeEstimatorService:
                 "source": "api"
             }
 
-        # Level 2: 인구 기반 추정
+        # ✅ Level 1: API 실패 시 기본 검색량 사용 (estimated 금지)
+        if level == 1:
+            # Level 1은 높은 기본 검색량 적용 (A급 유지)
+            print(f"   ⚠️ [Level 1 검색량] {keyword}: API 없음, 기본 검색량 적용 (A급 유지)")
+            default_volume = 10000  # Level 1 기본 검색량 (월 1만)
+            return {
+                "total": default_volume,
+                "pc": int(default_volume * 0.3),
+                "mobile": int(default_volume * 0.7),
+                "source": "restaurant_stats_fallback"  # A급 폴백
+            }
+
+        # Level 2-5: 인구 기반 추정
         estimated = self._estimate_from_population(location, category)
         print(f"⚠️ [{keyword}] API 데이터 없음 → 추정치 사용: {estimated:,}회/월")
         return {

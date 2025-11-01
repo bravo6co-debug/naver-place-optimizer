@@ -85,7 +85,7 @@ class CompetitionAnalyzerService:
                 "result_count": 0,  # API에서 제공 안함
                 "competition_score": competition_score,  # ✅ 높음:85, 중간:60, 낮음:30
                 "competition_level": ad_data["competition_level"],
-                "data_source": "api"  # ✅ 최고 등급 (S급)
+                "data_source": "api"  # ✅ S급 (검색광고 API)
             }
 
         # 2차: 요식업 CSV 통계 데이터 (음식점/카페) + 키워드 조정
@@ -108,7 +108,22 @@ class CompetitionAnalyzerService:
                         "data_source": "restaurant_stats"  # ✅ A급 (정부 통계)
                     }
 
-        # 3차: 인구 기반 추정 (최후 폴백) + 키워드 조정
+        # ✅ Level 1: estimated 금지 (S/A급만 허용)
+        if level == 1:
+            # Level 1은 API나 restaurant_stats 없으면 경고 후 restaurant_stats 기본값 반환
+            print(f"   ⚠️ [Level 1 경고] {keyword}: API/정부통계 없음, 기본 경쟁도 적용 (A급 유지)")
+            base_estimated = 85  # Level 1 기본 고경쟁도
+            adjusted_estimated = self._adjust_competition_by_keyword(
+                base_estimated, keyword, level
+            )
+            return {
+                "result_count": 0,
+                "competition_score": adjusted_estimated,
+                "competition_level": self._score_to_level(adjusted_estimated),
+                "data_source": "restaurant_stats_fallback"  # ✅ A급 (폴백)
+            }
+
+        # 3차: 인구 기반 추정 (Level 2-5만 허용)
         base_estimated = self._estimate_competition(location, category)
         adjusted_estimated = self._adjust_competition_by_keyword(
             base_estimated, keyword, level
@@ -118,7 +133,7 @@ class CompetitionAnalyzerService:
             "result_count": 0,  # 추정값
             "competition_score": adjusted_estimated,
             "competition_level": self._score_to_level(adjusted_estimated),
-            "data_source": "estimated"  # ✅ B~E급 (추정)
+            "data_source": "estimated"  # ✅ B급 (Level 2), C~F급 (Level 3-5)
         }
 
     async def _get_ad_competition_data(self, keyword: str) -> Dict:

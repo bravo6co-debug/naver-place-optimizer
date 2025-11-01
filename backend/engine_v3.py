@@ -143,6 +143,28 @@ class UnifiedKeywordEngine:
         conversion = conversion_rate * traffic_rate
         estimated_daily_traffic = int((estimated_searches / 30) * conversion)
 
+        # 6. 최종 데이터 등급 결정 (검색량 vs 경쟁도 중 낮은 등급 선택)
+        # 등급 우선순위: api(S) > restaurant_stats(A) > estimated(B~F)
+        volume_source = volume_data["source"]
+        competition_source = competition_data["data_source"]
+
+        # 두 소스 중 신뢰도가 낮은 것을 최종 등급으로 설정
+        source_priority = {
+            "api": 3,
+            "restaurant_stats": 2,
+            "restaurant_stats_fallback": 2,
+            "estimated": 1
+        }
+
+        volume_priority = source_priority.get(volume_source, 1)
+        competition_priority = source_priority.get(competition_source, 1)
+
+        # 낮은 등급을 최종 data_source로 선택
+        if volume_priority < competition_priority:
+            final_data_source = volume_source
+        else:
+            final_data_source = competition_source
+
         # KeywordMetrics 생성
         return KeywordMetrics(
             keyword=keyword,
@@ -155,8 +177,8 @@ class UnifiedKeywordEngine:
             estimated_timeline=timeline,
             estimated_traffic=estimated_daily_traffic,
             conversion_rate=conversion,
-            # V3 추가 정보
-            data_source=volume_data["source"],
+            # V3 추가 정보 (최종 데이터 등급)
+            data_source=final_data_source,
             monthly_pc_searches=volume_data.get("pc"),
             monthly_mobile_searches=volume_data.get("mobile")
         )
