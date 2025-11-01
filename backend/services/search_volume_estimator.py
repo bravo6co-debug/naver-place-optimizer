@@ -4,21 +4,12 @@
 
 from typing import Optional, Dict
 from integrations.naver_search_ad_api import NaverSearchAdAPI
+from integrations.mois_population_api import get_region_population
 from config.category_loader import CategoryLoader
 
 
 class SearchVolumeEstimatorService:
     """검색량 추정 서비스 - 다단계 폴백"""
-
-    # 지역 인구 데이터
-    POPULATION_DATA = {
-        "서울 강남구": 560000,
-        "서울 서초구": 420000,
-        "서울 송파구": 660000,
-        "서울 강북구": 320000,
-        "부산 해운대구": 410000,
-        "부산 부산진구": 380000,
-    }
 
     def __init__(self, search_ad_api: Optional[NaverSearchAdAPI] = None):
         self.search_ad_api = search_ad_api or NaverSearchAdAPI()
@@ -80,8 +71,8 @@ class SearchVolumeEstimatorService:
         return None
 
     def _estimate_from_population(self, location: str, category: str) -> int:
-        """지역 인구 기반 추정"""
-        population = self.POPULATION_DATA.get(location, 100000)
+        """지역 인구 기반 추정 (MOIS API 통합)"""
+        population = get_region_population(location)
 
         cat_data = self.category_loader.get_category(category)
         if not cat_data:
