@@ -6,6 +6,7 @@
 - 네이버 검색광고 API 우선 사용
 - 다단계 폴백 시스템
 - 레거시 호환성 유지
+Updated: 2025-11-01 - Railway deployment fix
 """
 
 import os
@@ -58,17 +59,9 @@ class KeywordMetrics:
     monthly_mobile_searches: Optional[int] = None
 
 
-@dataclass
-class StrategyPhase:
-    """전략 단계 (레거시 호환)"""
-    phase: int
-    name: str
-    duration: str
-    target_level: int
-    target_keywords_count: int
-    strategies: List[str]
-    goals: List[str]
-    expected_daily_visitors: int
+# StrategyPhase는 models.strategy에서 import (Line 19의 StrategyPhaseModel 사용)
+# 레거시 호환성을 위해 별칭 생성
+StrategyPhase = StrategyPhaseModel
 
 
 class UnifiedKeywordEngine:
@@ -202,7 +195,8 @@ class UnifiedKeywordEngine:
         self,
         current_daily_visitors: int,
         target_daily_visitors: int,
-        category: str
+        category: str,
+        analyzed_keywords: Optional[List[KeywordMetrics]] = None
     ) -> List[StrategyPhase]:
         """
         전략 로드맵 생성 (레거시 호환 메서드)
@@ -211,6 +205,7 @@ class UnifiedKeywordEngine:
             current_daily_visitors: 현재 일방문자
             target_daily_visitors: 목표 일방문자
             category: 업종
+            analyzed_keywords: 분석된 키워드 목록 (V4+)
 
         Returns:
             StrategyPhase 리스트
@@ -218,23 +213,13 @@ class UnifiedKeywordEngine:
         phases = self.strategy_planner.generate_roadmap(
             current_daily_visitors=current_daily_visitors,
             target_daily_visitors=target_daily_visitors,
-            category=category
+            category=category,
+            analyzed_keywords=analyzed_keywords
         )
 
-        # StrategyPhaseModel → StrategyPhase 변환 (레거시 호환)
-        return [
-            StrategyPhase(
-                phase=p.phase,
-                name=p.name,
-                duration=p.duration,
-                target_level=p.target_level,
-                target_keywords_count=p.target_keywords_count,
-                strategies=p.strategies,
-                goals=p.goals,
-                expected_daily_visitors=p.expected_daily_visitors
-            )
-            for p in phases
-        ]
+        # StrategyPhase는 이제 models.strategy.StrategyPhase의 별칭이므로 변환 불필요
+        # V5 필드를 포함한 모든 필드가 자동으로 유지됨
+        return phases
 
 
 # 테스트 코드
