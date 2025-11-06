@@ -5,14 +5,16 @@
 import random
 from typing import List, Dict, Optional
 from integrations.openai_api import OpenAIAPI
+from integrations.naver_search_ad_api import NaverSearchAdAPI
 from config.category_loader import CategoryLoader
 
 
 class KeywordGeneratorService:
     """키워드 생성 서비스"""
 
-    def __init__(self, openai_api: Optional[OpenAIAPI] = None):
+    def __init__(self, openai_api: Optional[OpenAIAPI] = None, naver_ad_api: Optional[NaverSearchAdAPI] = None):
         self.openai_api = openai_api or OpenAIAPI()
+        self.naver_ad_api = naver_ad_api or NaverSearchAdAPI()
         self.category_loader = CategoryLoader()
 
     async def generate_keywords(
@@ -171,73 +173,165 @@ class KeywordGeneratorService:
                     "reason": "기본 중간"
                 })
 
-        # Level 2 (경쟁) - 4개: 지역 + specialty/category
+        # Level 2 (경쟁) - 4개: 지역 + 업종 조합 (업종 필수 포함)
         base_location = location_parts[0] if len(location_parts) >= 2 else location
+        detail_location = location_parts[1] if len(location_parts) >= 2 else location
 
         if all_specialty_related:
-            for i in range(4):
-                spec = all_specialty_related[i % len(all_specialty_related)]
-                if i % 2 == 0:
-                    keywords.append({
-                        "keyword": f"{base_location} {spec}",
-                        "level": 2,
-                        "reason": f"경쟁: 광역+특성"
+            # 1. 광역지역 + 업종
+            keywords.append({
+                "keyword": f"{base_location} {category}",
+                "level": 2,
+                "reason": "경쟁: 광역+업종"
+            })
+            # 2. 광역지역 + 특징 + 업종 (specialty에 업종 포함 체크)
+            spec = all_specialty_related[0]
+            if category.lower() in spec.lower():
+                # specialty에 이미 업종 포함 (예: "해변카페")
+                keywords.append({
+                    "keyword": f"{base_location} {spec}",
+                    "level": 2,
+                    "reason": f"경쟁: 광역+특성 (업종 포함)"
+                })
+            else:
+                keywords.append({
+                    "keyword": f"{base_location} {spec} {category}",
+                    "level": 2,
+                    "reason": f"경쟁: 광역+특성+업종"
+                })
+            # 3. 상세지역 + 업종
+            keywords.append({
+                "keyword": f"{detail_location} {category}",
+                "level": 2,
+                "reason": "경쟁: 상세지역+업종"
+            })
+            # 4. 상세지역 + 특징 + 업종 (specialty에 업종 포함 체크)
+            spec2 = all_specialty_related[1 % len(all_specialty_related)]
+            if category.lower() in spec2.lower():
+                keywords.append({
+                    "keyword": f"{detail_location} {spec2}",
+                    "level": 2,
+                    "reason": f"경쟁: 상세지역+특성 (업종 포함)"
+                })
+            else:
+                keywords.append({
+                    "keyword": f"{detail_location} {spec2} {category}",
+                    "level": 2,
+                    "reason": f"경쟁: 상세지역+특성+업종"
+                })
+        else:
+            # specialty 없을 경우 지역+업종 조합만
+            keywords.extend([
+                {"keyword": f"{base_location} {category}", "level": 2, "reason": "경쟁: 광역+업종"},
+                {"keyword": f"{detail_location} {category}", "level": 2, "reason": "경쟁: 상세지역+업종"},
+                {"keyword": f"{base_location} {category_related[0]}", "level": 2, "reason": "경쟁: 광역+업종관련어"},
+                {"keyword": f"{detail_location} {category_related[0]}", "level": 2, "reason": "경쟁: 상세지역+업종관련어"}
+            ])
+
+        # Level 1 (최상위) - 2개: 검색량 기반 우선순위 (나중에 정렬)
+        level1_candidates = []
+
+        # 후보 생성: 지역+업종, 특징+업종, 연관키워드
+        level1_candidates.append({
+            "keyword": f"{base_location} {category}",
+            "level": 1,
+            "reason": "최상위: 광역+업종"
+        })
+
+        if len(location_parts) >= 2:
+            level1_candidates.append({
+                "keyword": f"{detail_location} {category}",
+                "level": 1,
+                "reason": "최상위: 상세지역+업종"
+            })
+
+        if all_specialty_related:
+            # 특징+업종 조합 (specialty 관련어에 이미 업종이 포함되지 않은 경우만)
+            for i, spec in enumerate(all_specialty_related[:3]):
+                # specialty 관련어에 이미 category가 포함되어 있으면 단독 사용
+                if category.lower() in spec.lower():
+                    level1_candidates.append({
+                        "keyword": spec,
+                        "level": 1,
+                        "reason": f"최상위: 특성 단독 (업종 포함)"
                     })
                 else:
-                    cat = category_related[0]
-                    keywords.append({
-                        "keyword": f"{base_location} {spec} {cat}",
-                        "level": 2,
-                        "reason": f"경쟁: 광역+특성+업종"
+                    level1_candidates.append({
+                        "keyword": f"{spec} {category}",
+                        "level": 1,
+                        "reason": f"최상위: 특성+업종"
                     })
-        else:
-            for i in range(4):
-                cat = category_related[i % len(category_related)]
-                keywords.append({
-                    "keyword": f"{base_location} {cat}",
-                    "level": 2,
-                    "reason": "경쟁: 광역+업종"
-                })
 
-        # Level 1 (최상위) - 2개: specialty 또는 category만
-        if all_specialty_related:
-            keywords.append({
-                "keyword": all_specialty_related[0],
+        # 업종 관련어
+        for cat in category_related[:2]:
+            level1_candidates.append({
+                "keyword": cat,
                 "level": 1,
-                "reason": "최상위: 특성 단독"
+                "reason": "최상위: 업종관련어"
             })
-            if len(all_specialty_related) > 1:
-                keywords.append({
-                    "keyword": all_specialty_related[1],
-                    "level": 1,
-                    "reason": "최상위: 특성 단독"
-                })
-            else:
-                keywords.append({
-                    "keyword": category,
-                    "level": 1,
-                    "reason": "최상위: 업종 단독"
-                })
-        else:
-            keywords.append({
-                "keyword": category,
-                "level": 1,
-                "reason": "최상위: 업종 단독"
-            })
-            if len(category_related) > 1:
-                keywords.append({
-                    "keyword": category_related[1],
-                    "level": 1,
-                    "reason": "최상위: 업종 관련어"
-                })
-            else:
-                keywords.append({
-                    "keyword": category_related[0],
-                    "level": 1,
-                    "reason": "최상위: 업종 관련어"
-                })
+
+        # 검색량 기반 정렬로 상위 2개 선택
+        sorted_level1 = self._sort_by_search_volume(level1_candidates)
+        keywords.extend(sorted_level1[:2])
 
         return keywords
+
+    def _sort_by_search_volume(self, candidates: List[Dict]) -> List[Dict]:
+        """
+        검색량 기반으로 키워드 정렬
+
+        Args:
+            candidates: 후보 키워드 리스트
+
+        Returns:
+            검색량 순으로 정렬된 키워드 리스트
+        """
+        if not candidates:
+            return candidates
+
+        # 네이버 검색광고 API가 인증되지 않았으면 원본 순서 반환
+        if not self.naver_ad_api.is_authenticated:
+            print("⚠️ 네이버 검색광고 API 미인증 - Level 1 검색량 정렬 생략")
+            return candidates
+
+        try:
+            # 키워드 목록 추출
+            keyword_texts = [kw["keyword"] for kw in candidates]
+
+            # 검색량 조회
+            stats = self.naver_ad_api.get_keyword_stats(keyword_texts)
+
+            # 검색량 매핑 생성
+            search_volumes = {}
+            for stat in stats:
+                parsed = self.naver_ad_api.parse_keyword_data(stat)
+                if parsed:
+                    search_volumes[parsed["keyword"]] = parsed["monthly_total_searches"]
+
+            # 검색량 정보 추가 및 정렬
+            for candidate in candidates:
+                kw_text = candidate["keyword"]
+                volume = search_volumes.get(kw_text, 0)
+                candidate["search_volume"] = volume
+
+            # 검색량 기준 내림차순 정렬
+            sorted_candidates = sorted(
+                candidates,
+                key=lambda x: x.get("search_volume", 0),
+                reverse=True
+            )
+
+            # 정렬 결과 로깅
+            print(f"   📊 Level 1 검색량 정렬 완료:")
+            for i, kw in enumerate(sorted_candidates[:5], 1):
+                volume = kw.get("search_volume", 0)
+                print(f"      {i}. {kw['keyword']}: {volume:,}회/월")
+
+            return sorted_candidates
+
+        except Exception as e:
+            print(f"⚠️ 검색량 정렬 실패: {e} - 원본 순서 반환")
+            return candidates
 
     def _limit_keywords_per_level(self, keywords: List[Dict]) -> List[Dict]:
         """
