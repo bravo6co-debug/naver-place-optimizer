@@ -29,10 +29,10 @@ class CategoryLoader:
 
     def get_category(self, category_name: str) -> Optional[Dict]:
         """
-        업종 데이터 조회
+        업종 데이터 조회 (유사 업종 매핑 + 범용 전략 폴백)
 
         Args:
-            category_name: 업종 이름 (예: "음식점", "카페")
+            category_name: 업종 이름 (예: "음식점", "카페", "치킨집", "정형외과")
 
         Returns:
             업종 데이터 딕셔너리 또는 None
@@ -41,8 +41,8 @@ class CategoryLoader:
         if category_name in self._cache:
             return self._cache[category_name]
 
-        # 파일명 매핑
-        filename_map = {
+        # 1차 매핑: 정확한 업종명
+        exact_map = {
             "음식점": "restaurant.json",
             "카페": "cafe.json",
             "미용실": "salon.json",
@@ -51,9 +51,78 @@ class CategoryLoader:
             "헬스장": "gym.json"
         }
 
-        filename = filename_map.get(category_name)
+        # 2차 매핑: 유사 업종 → 대표 업종
+        similar_map = {
+            # 음식점 관련
+            "식당": "restaurant.json",
+            "맛집": "restaurant.json",
+            "레스토랑": "restaurant.json",
+            "한식": "restaurant.json",
+            "중식": "restaurant.json",
+            "일식": "restaurant.json",
+            "양식": "restaurant.json",
+            "치킨": "restaurant.json",
+            "치킨집": "restaurant.json",
+            "피자": "restaurant.json",
+            "피자집": "restaurant.json",
+            "분식": "restaurant.json",
+            "분식집": "restaurant.json",
+            "고기집": "restaurant.json",
+            "술집": "restaurant.json",
+            "횟집": "restaurant.json",
+
+            # 카페 관련
+            "커피숍": "cafe.json",
+            "디저트": "cafe.json",
+            "디저트카페": "cafe.json",
+            "베이커리": "cafe.json",
+            "제과점": "cafe.json",
+
+            # 미용실 관련
+            "헤어샵": "salon.json",
+            "네일샵": "salon.json",
+            "피부관리": "salon.json",
+            "네일아트": "salon.json",
+            "왁싱": "salon.json",
+
+            # 병원 관련
+            "의원": "hospital.json",
+            "클리닉": "hospital.json",
+            "정형외과": "hospital.json",
+            "치과": "hospital.json",
+            "한의원": "hospital.json",
+            "피부과": "hospital.json",
+            "내과": "hospital.json",
+            "소아과": "hospital.json",
+
+            # 학원 관련
+            "교습소": "academy.json",
+            "과외": "academy.json",
+            "영어학원": "academy.json",
+            "수학학원": "academy.json",
+            "음악학원": "academy.json",
+            "미술학원": "academy.json",
+
+            # 헬스장 관련
+            "피트니스": "gym.json",
+            "요가": "gym.json",
+            "필라테스": "gym.json",
+            "크로스핏": "gym.json",
+            "pt": "gym.json",
+            "PT": "gym.json"
+        }
+
+        # 1차 시도: 정확한 매핑
+        filename = exact_map.get(category_name)
+
+        # 2차 시도: 유사 업종 매핑
         if not filename:
-            return None
+            filename = similar_map.get(category_name)
+
+        # 3차 폴백: 범용 전략 사용
+        if not filename:
+            filename = "_generic_strategies.json"
+            print(f"ℹ️ '{category_name}' → 범용 전략 사용")
 
         filepath = self.categories_dir / filename
 
@@ -63,10 +132,10 @@ class CategoryLoader:
                 self._cache[category_name] = data
                 return data
         except FileNotFoundError:
-            print(f"업종 데이터 파일을 찾을 수 없습니다: {filepath}")
+            print(f"❌ 업종 데이터 파일을 찾을 수 없습니다: {filepath}")
             return None
         except json.JSONDecodeError as e:
-            print(f"JSON 파싱 오류: {filepath} - {e}")
+            print(f"❌ JSON 파싱 오류: {filepath} - {e}")
             return None
 
     def list_categories(self) -> List[str]:
