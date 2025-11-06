@@ -173,102 +173,132 @@ class KeywordGeneratorService:
                     "reason": "기본 중간"
                 })
 
-        # Level 2 (경쟁) - 4개: 지역 + 업종 조합 (업종 필수 포함)
+        # Level 2 (경쟁) - 4개: 3가지 조합 (지역 + 특징 + 업종)
         base_location = location_parts[0] if len(location_parts) >= 2 else location
         detail_location = location_parts[1] if len(location_parts) >= 2 else location
 
         if all_specialty_related:
-            # 1. 광역지역 + 업종
-            keywords.append({
-                "keyword": f"{base_location} {category}",
-                "level": 2,
-                "reason": "경쟁: 광역+업종"
-            })
-            # 2. 광역지역 + 특징 + 업종 (specialty에 업종 포함 체크)
+            # ✅ 3-way combinations ONLY (specialty required)
+            # 1. 광역지역 + 특징 + 업종
             spec = all_specialty_related[0]
             if category.lower() in spec.lower():
                 # specialty에 이미 업종 포함 (예: "해변카페")
                 keywords.append({
                     "keyword": f"{base_location} {spec}",
                     "level": 2,
-                    "reason": f"경쟁: 광역+특성 (업종 포함)"
+                    "reason": "경쟁: 광역+특성 (업종 포함)"
                 })
             else:
                 keywords.append({
                     "keyword": f"{base_location} {spec} {category}",
                     "level": 2,
-                    "reason": f"경쟁: 광역+특성+업종"
+                    "reason": "경쟁: 광역+특성+업종"
                 })
-            # 3. 상세지역 + 업종
-            keywords.append({
-                "keyword": f"{detail_location} {category}",
-                "level": 2,
-                "reason": "경쟁: 상세지역+업종"
-            })
-            # 4. 상세지역 + 특징 + 업종 (specialty에 업종 포함 체크)
+
+            # 2. 상세지역 + 특징 + 업종
             spec2 = all_specialty_related[1 % len(all_specialty_related)]
             if category.lower() in spec2.lower():
                 keywords.append({
                     "keyword": f"{detail_location} {spec2}",
                     "level": 2,
-                    "reason": f"경쟁: 상세지역+특성 (업종 포함)"
+                    "reason": "경쟁: 상세지역+특성 (업종 포함)"
                 })
             else:
                 keywords.append({
                     "keyword": f"{detail_location} {spec2} {category}",
                     "level": 2,
-                    "reason": f"경쟁: 상세지역+특성+업종"
+                    "reason": "경쟁: 상세지역+특성+업종"
+                })
+
+            # 3. 전체지역명 + 특징 + 업종 (full location)
+            spec3 = all_specialty_related[2 % len(all_specialty_related)]
+            if category.lower() in spec3.lower():
+                keywords.append({
+                    "keyword": f"{location} {spec3}",
+                    "level": 2,
+                    "reason": "경쟁: 전체지역+특성 (업종 포함)"
+                })
+            else:
+                keywords.append({
+                    "keyword": f"{location} {spec3} {category}",
+                    "level": 2,
+                    "reason": "경쟁: 전체지역+특성+업종"
+                })
+
+            # 4. 상세지역 + 특징2 + 업종 (variant)
+            spec4 = all_specialty_related[3 % len(all_specialty_related)]
+            if category.lower() in spec4.lower():
+                keywords.append({
+                    "keyword": f"{detail_location} {spec4}",
+                    "level": 2,
+                    "reason": "경쟁: 상세지역+특성2 (업종 포함)"
+                })
+            else:
+                keywords.append({
+                    "keyword": f"{detail_location} {spec4} {category}",
+                    "level": 2,
+                    "reason": "경쟁: 상세지역+특성2+업종"
                 })
         else:
-            # specialty 없을 경우 지역+업종 조합만
+            # specialty 없을 경우: 지역+업종관련어 조합
             keywords.extend([
-                {"keyword": f"{base_location} {category}", "level": 2, "reason": "경쟁: 광역+업종"},
-                {"keyword": f"{detail_location} {category}", "level": 2, "reason": "경쟁: 상세지역+업종"},
-                {"keyword": f"{base_location} {category_related[0]}", "level": 2, "reason": "경쟁: 광역+업종관련어"},
-                {"keyword": f"{detail_location} {category_related[0]}", "level": 2, "reason": "경쟁: 상세지역+업종관련어"}
+                {"keyword": f"{base_location} {category_related[0]} {category}", "level": 2, "reason": "경쟁: 광역+관련어+업종"},
+                {"keyword": f"{detail_location} {category_related[0]} {category}", "level": 2, "reason": "경쟁: 상세지역+관련어+업종"},
+                {"keyword": f"{location} {category_related[1 % len(category_related)]} {category}", "level": 2, "reason": "경쟁: 전체지역+관련어+업종"},
+                {"keyword": f"{base_location} {category_related[2 % len(category_related)]} {category}", "level": 2, "reason": "경쟁: 광역+관련어2+업종"}
             ])
 
-        # Level 1 (최상위) - 2개: 검색량 기반 우선순위 (나중에 정렬)
+        # Level 1 (최상위) - 2개: 2가지 조합 또는 1가지 단독, 검색량 기반 우선순위
         level1_candidates = []
 
-        # 후보 생성: 지역+업종, 특징+업종, 연관키워드
+        # ✅ Level 2 키워드 수집 (중복 방지용)
+        level2_keywords = {kw["keyword"] for kw in keywords if kw["level"] == 2}
+
+        # 후보 생성: 1-way (broadest) 및 2-way combinations
+        # 1. 업종 단독 (1-way, 가장 광범위)
+        level1_candidates.append({
+            "keyword": category,
+            "level": 1,
+            "reason": "최상위: 업종 단독 (1-way, broadest)"
+        })
+
+        # 2. 광역지역 + 업종 (2-way)
         level1_candidates.append({
             "keyword": f"{base_location} {category}",
             "level": 1,
-            "reason": "최상위: 광역+업종"
+            "reason": "최상위: 광역+업종 (2-way)"
         })
 
-        if len(location_parts) >= 2:
-            level1_candidates.append({
-                "keyword": f"{detail_location} {category}",
-                "level": 1,
-                "reason": "최상위: 상세지역+업종"
-            })
-
+        # 3. 특징 + 업종 (2-way)
         if all_specialty_related:
-            # 특징+업종 조합 (specialty 관련어에 이미 업종이 포함되지 않은 경우만)
             for i, spec in enumerate(all_specialty_related[:3]):
                 # specialty 관련어에 이미 category가 포함되어 있으면 단독 사용
                 if category.lower() in spec.lower():
                     level1_candidates.append({
                         "keyword": spec,
                         "level": 1,
-                        "reason": f"최상위: 특성 단독 (업종 포함)"
+                        "reason": f"최상위: 특성 단독 (업종 포함, 1-way)"
                     })
                 else:
                     level1_candidates.append({
                         "keyword": f"{spec} {category}",
                         "level": 1,
-                        "reason": f"최상위: 특성+업종"
+                        "reason": f"최상위: 특성+업종 (2-way)"
                     })
 
-        # 업종 관련어
+        # 4. 업종 관련어 (1-way)
         for cat in category_related[:2]:
             level1_candidates.append({
                 "keyword": cat,
                 "level": 1,
-                "reason": "최상위: 업종관련어"
+                "reason": "최상위: 업종관련어 (1-way)"
             })
+
+        # ✅ Level 2와 중복되는 키워드 제거
+        level1_candidates = [
+            kw for kw in level1_candidates
+            if kw["keyword"] not in level2_keywords
+        ]
 
         # 검색량 기반 정렬로 상위 2개 선택
         sorted_level1 = self._sort_by_search_volume(level1_candidates)
