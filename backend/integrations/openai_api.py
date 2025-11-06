@@ -239,6 +239,104 @@ class OpenAIAPI:
             print(f"JSON 파싱 실패: {e}")
             return []
 
+    def generate_related_keywords(
+        self,
+        category: str,
+        specialty: Optional[str] = None
+    ) -> Dict[str, List[str]]:
+        """
+        GPT를 사용한 연관 키워드 생성 (조합하지 않고 연관어만)
+
+        Args:
+            category: 업종 (예: "카페", "병원")
+            specialty: 특징/전문분야 (콤마로 구분, 예: "브런치, 애견동반")
+
+        Returns:
+            연관 키워드 딕셔너리
+            {
+                "category_related": ["커피숍", "디저트카페", "베이커리카페", "티하우스", "북카페"],
+                "specialty1_related": ["브런치맛집", "아침식사", "모닝식사", "조식", "브런치메뉴"],
+                "specialty2_related": ["반려동물", "강아지동반", "펫프렌들리", "애견카페", "반려견"]
+            }
+        """
+        if not self.client:
+            return {}
+
+        specialty_list = []
+        if specialty:
+            specialty_list = [s.strip() for s in specialty.split(',') if s.strip()]
+
+        specialty_str = ', '.join(specialty_list) if specialty_list else "없음"
+
+        prompt = f"""당신은 네이버 플레이스 검색 최적화 전문가입니다.
+주어진 업종과 특성에 대한 **연관 키워드**만 생성하세요. (조합하지 말 것!)
+
+**입력:**
+- category: {category}
+- specialty: {specialty_str}
+
+**출력 형식**: JSON 객체 (코드블록 없이 순수 JSON)
+
+**규칙:**
+1. category에 대한 연관 키워드 5개 생성 → "category_related" 키
+   - 동의어, 하위 업종, 유사 업종 포함
+   - 예: category="카페" → ["커피숍", "디저트카페", "베이커리카페", "티하우스", "북카페"]
+
+2. specialty가 있으면 각 특성마다 연관 키워드 5개씩 생성 → "specialty1_related", "specialty2_related" 등의 키
+   - 동의어, 관련 표현, 검색 의도 키워드 포함
+   - 예: specialty="브런치" → ["브런치맛집", "아침식사", "모닝식사", "조식", "브런치메뉴"]
+   - 예: specialty="애견동반" → ["반려동물", "강아지동반", "펫프렌들리", "애견카페", "반려견"]
+
+3. **중요**: 조합하지 말고 단일 키워드만 생성할 것!
+   - ✅ Good: "브런치맛집", "강아지동반"
+   - ❌ Bad: "브런치 강아지동반 카페", "홍대 브런치"
+
+**출력 예시 1** (category=카페, specialty=브런치, 애견동반):
+{{
+  "category_related": ["커피숍", "디저트카페", "베이커리카페", "티하우스", "북카페"],
+  "specialty1_related": ["브런치맛집", "아침식사", "모닝식사", "조식", "브런치메뉴"],
+  "specialty2_related": ["반려동물", "강아지동반", "펫프렌들리", "애견카페", "반려견동반"]
+}}
+
+**출력 예시 2** (category=병원, specialty=안과):
+{{
+  "category_related": ["의료기관", "종합병원", "클리닉", "의원", "진료소"],
+  "specialty1_related": ["안과의원", "눈병원", "시력교정", "라식", "안과진료"]
+}}
+
+**출력 예시 3** (category=카페, specialty 없음):
+{{
+  "category_related": ["커피숍", "디저트카페", "베이커리카페", "티하우스", "북카페"]
+}}
+
+이제 입력된 정보로 연관 키워드를 생성하세요:"""
+
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are a Naver Place SEO expert. Always respond in Korean with valid JSON."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.7,
+                max_tokens=800
+            )
+
+            content = response.choices[0].message.content
+
+            # 코드 블록 제거
+            if "```json" in content:
+                content = content.split("```json")[1].split("```")[0]
+            elif "```" in content:
+                content = content.split("```")[1].split("```")[0]
+
+            related_keywords = json.loads(content.strip())
+            return related_keywords
+
+        except Exception as e:
+            print(f"연관 키워드 생성 실패: {e}")
+            return {}
+
     def validate_specialty_inclusion(
         self,
         keywords: List[Dict],

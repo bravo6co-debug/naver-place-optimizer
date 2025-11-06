@@ -22,7 +22,10 @@ class KeywordGeneratorService:
         specialty: Optional[str] = None
     ) -> List[Dict]:
         """
-        키워드 생성 (GPT 우선, 폴백은 패턴 기반)
+        2단계 키워드 생성 프로세스
+
+        Stage 1: GPT로 연관 키워드만 생성 (조합 없이)
+        Stage 2: 연관 키워드를 조합 규칙으로 결합
 
         Args:
             category: 업종
@@ -30,35 +33,209 @@ class KeywordGeneratorService:
             specialty: 특징/전문분야
 
         Returns:
-            키워드 리스트
+            키워드 리스트 (총 30개: Level 5=10, 4=8, 3=6, 2=4, 1=2)
         """
-        # 업종 데이터 로드 (없으면 커스텀 업종으로 처리)
-        cat_data = self.category_loader.get_category(category)
-
-        # GPT로 키워드 생성 시도
-        if cat_data:
-            modifiers = cat_data.get("modifiers", {})
-            modifier_examples = self._build_modifier_examples(modifiers)
-        else:
-            # 커스텀 업종 - GPT가 스스로 패턴을 생성하도록 함
-            modifier_examples = ""
-
-        keywords = self.openai_api.generate_keywords(
+        # Stage 1: GPT로 연관 키워드 생성
+        related_keywords = self.openai_api.generate_related_keywords(
             category=category,
-            location=location,
-            specialty=specialty,
-            modifier_examples=modifier_examples
+            specialty=specialty
         )
 
-        # GPT 실패 시 폴백 (카테고리 데이터가 있는 경우만)
-        if not keywords and cat_data:
-            keywords = self._generate_fallback_keywords(category, location, cat_data, specialty)
-        elif not keywords:
-            # 커스텀 업종이고 GPT도 실패한 경우 - 기본 키워드 생성
+        # Stage 2: 연관 키워드를 조합하여 최종 키워드 생성
+        if related_keywords:
+            keywords = self._combine_keywords_by_level(
+                location=location,
+                category=category,
+                specialty=specialty,
+                related_keywords=related_keywords
+            )
+        else:
+            # Fallback: 연관 키워드 생성 실패 시 기본 키워드 사용
+            print("⚠️ 연관 키워드 생성 실패, 기본 키워드 사용")
             keywords = self._generate_generic_keywords(category, location, specialty)
 
-        # ✅ Level별 키워드 개수 제한 (GPT가 초과 생성하는 경우 필터링)
+        # Level별 키워드 개수 제한
         keywords = self._limit_keywords_per_level(keywords)
+
+        return keywords
+
+    def _combine_keywords_by_level(
+        self,
+        location: str,
+        category: str,
+        specialty: Optional[str],
+        related_keywords: Dict[str, List[str]]
+    ) -> List[Dict]:
+        """
+        연관 키워드를 조합하여 레벨별 키워드 생성
+
+        Args:
+            location: 지역
+            category: 업종
+            specialty: 특징/전문분야
+            related_keywords: 연관 키워드 딕셔너리
+
+        Returns:
+            레벨별 키워드 리스트
+        """
+        keywords = []
+        location_parts = location.split()
+
+        # 연관 키워드 추출
+        category_related = related_keywords.get("category_related", [category])
+        specialty_list = []
+        if specialty:
+            specialty_list = [s.strip() for s in specialty.split(',') if s.strip()]
+
+        # specialty별 연관 키워드 수집
+        all_specialty_related = []
+        for i, spec in enumerate(specialty_list, 1):
+            spec_key = f"specialty{i}_related"
+            if spec_key in related_keywords:
+                all_specialty_related.extend(related_keywords[spec_key])
+            else:
+                all_specialty_related.append(spec)  # 기본값으로 specialty 자체 사용
+
+        # Level 5 (롱테일) - 10개: 복잡한 조합 + 조사
+        level5_patterns = [
+            lambda loc, cat, spec: f"{loc} {spec} {cat} 추천해줘",
+            lambda loc, cat, spec: f"{loc}에 있는 {spec} {cat} 어디가 좋을까",
+            lambda loc, cat, spec: f"{loc} {spec} 잘하는 {cat} 찾아요",
+            lambda loc, cat, spec: f"{loc} {spec} {cat} 후기 좋은 곳",
+            lambda loc, cat, spec: f"{loc}에서 {spec} 되는 {cat} 추천",
+            lambda loc, cat, spec: f"{loc} {spec} 전문 {cat} 어디?",
+            lambda loc, cat, spec: f"{loc} {spec} {cat} 가격 저렴한 곳",
+            lambda loc, cat, spec: f"{loc} 근처 {spec} {cat} 괜찮은데",
+            lambda loc, cat, spec: f"{loc} {spec} {cat} 예약 가능한 곳",
+            lambda loc, cat, spec: f"{loc}에 {spec} {cat} 있나요"
+        ]
+
+        for i in range(10):
+            if all_specialty_related:
+                spec = all_specialty_related[i % len(all_specialty_related)]
+                cat = category_related[i % len(category_related)]
+                pattern = level5_patterns[i % len(level5_patterns)]
+                keywords.append({
+                    "keyword": pattern(location, cat, spec),
+                    "level": 5,
+                    "reason": f"롱테일: {spec} + {cat}"
+                })
+            else:
+                cat = category_related[i % len(category_related)]
+                keywords.append({
+                    "keyword": f"{location} {cat} 추천 후기",
+                    "level": 5,
+                    "reason": "기본 롱테일"
+                })
+
+        # Level 4 (니치) - 8개: 중간 조합
+        for i in range(8):
+            if all_specialty_related:
+                spec = all_specialty_related[i % len(all_specialty_related)]
+                cat = category_related[i % len(category_related)]
+                if i % 2 == 0:
+                    keywords.append({
+                        "keyword": f"{location} {spec} {cat} 추천",
+                        "level": 4,
+                        "reason": f"니치: {spec}"
+                    })
+                else:
+                    keywords.append({
+                        "keyword": f"{location} {spec} 잘하는 {cat}",
+                        "level": 4,
+                        "reason": f"니치: {spec} 품질"
+                    })
+            else:
+                cat = category_related[i % len(category_related)]
+                keywords.append({
+                    "keyword": f"{location} {cat} 추천",
+                    "level": 4,
+                    "reason": "기본 니치"
+                })
+
+        # Level 3 (중간) - 6개: 간단한 조합
+        for i in range(6):
+            if all_specialty_related:
+                spec = all_specialty_related[i % len(all_specialty_related)]
+                cat = category_related[i % len(category_related)]
+                keywords.append({
+                    "keyword": f"{location} {spec} {cat}",
+                    "level": 3,
+                    "reason": f"중간: 지역+특성+업종"
+                })
+            else:
+                cat = category_related[i % len(category_related)]
+                keywords.append({
+                    "keyword": f"{location} {cat}",
+                    "level": 3,
+                    "reason": "기본 중간"
+                })
+
+        # Level 2 (경쟁) - 4개: 지역 + specialty/category
+        base_location = location_parts[0] if len(location_parts) >= 2 else location
+
+        if all_specialty_related:
+            for i in range(4):
+                spec = all_specialty_related[i % len(all_specialty_related)]
+                if i % 2 == 0:
+                    keywords.append({
+                        "keyword": f"{base_location} {spec}",
+                        "level": 2,
+                        "reason": f"경쟁: 광역+특성"
+                    })
+                else:
+                    cat = category_related[0]
+                    keywords.append({
+                        "keyword": f"{base_location} {spec} {cat}",
+                        "level": 2,
+                        "reason": f"경쟁: 광역+특성+업종"
+                    })
+        else:
+            for i in range(4):
+                cat = category_related[i % len(category_related)]
+                keywords.append({
+                    "keyword": f"{base_location} {cat}",
+                    "level": 2,
+                    "reason": "경쟁: 광역+업종"
+                })
+
+        # Level 1 (최상위) - 2개: specialty 또는 category만
+        if all_specialty_related:
+            keywords.append({
+                "keyword": all_specialty_related[0],
+                "level": 1,
+                "reason": "최상위: 특성 단독"
+            })
+            if len(all_specialty_related) > 1:
+                keywords.append({
+                    "keyword": all_specialty_related[1],
+                    "level": 1,
+                    "reason": "최상위: 특성 단독"
+                })
+            else:
+                keywords.append({
+                    "keyword": category,
+                    "level": 1,
+                    "reason": "최상위: 업종 단독"
+                })
+        else:
+            keywords.append({
+                "keyword": category,
+                "level": 1,
+                "reason": "최상위: 업종 단독"
+            })
+            if len(category_related) > 1:
+                keywords.append({
+                    "keyword": category_related[1],
+                    "level": 1,
+                    "reason": "최상위: 업종 관련어"
+                })
+            else:
+                keywords.append({
+                    "keyword": category_related[0],
+                    "level": 1,
+                    "reason": "최상위: 업종 관련어"
+                })
 
         return keywords
 
@@ -73,10 +250,10 @@ class KeywordGeneratorService:
             제한된 키워드 리스트
         """
         level_limits = {
-            5: 15,  # 롱테일
-            4: 10,  # 니치
-            3: 5,   # 중간
-            2: 2,   # 경쟁
+            5: 10,  # 롱테일
+            4: 8,   # 니치
+            3: 6,   # 중간
+            2: 4,   # 경쟁
             1: 2    # 최상위
         }
 
