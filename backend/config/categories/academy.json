@@ -20,8 +20,8 @@
   "receipt_review_strategy": {
     "level_5": {
       "target_count": 100,
-      "weekly_target": 6,
-      "consistency_message": "일 1개 신규 리뷰 (꾸준함이 핵심, 1개월 목표)",
+      "weekly_target": 23,
+      "consistency_message": "일 3-4개 신규 리뷰 (꾸준함이 핵심, 1개월 목표)",
       "quality_standard": {
         "min_text_length": 30,
         "min_photos": 1,
@@ -39,8 +39,8 @@
     },
     "level_4": {
       "target_count": 300,
-      "weekly_target": 12,
-      "consistency_message": "일 1-2개 신규 리뷰 (1-2일 공백 없음, 2개월 목표)",
+      "weekly_target": 35,
+      "consistency_message": "일 5개 신규 리뷰 (공백 없이 꾸준히, 2개월 목표)",
       "quality_standard": {
         "min_text_length": 50,
         "min_photos": 1,
@@ -57,9 +57,9 @@
       "incentive": "영수증 리뷰 + 키워드 2개 포함 시 추가 강의 1회 무료"
     },
     "level_3": {
-      "target_count": 999,
-      "weekly_target": 19,
-      "consistency_message": "일 2-3개 신규 리뷰 (절대 공백 없음, 3개월 목표)",
+      "target_count": 500,
+      "weekly_target": 39,
+      "consistency_message": "일 5-6개 신규 리뷰 (절대 공백 없음, 3개월 목표)",
       "quality_standard": {
         "min_text_length": 80,
         "min_photos": 1,
@@ -76,7 +76,7 @@
       "incentive": "영수증 리뷰 + 사진 1장 시 모의고사 무료 제공"
     },
     "level_2": {
-      "target_count": 999,
+      "target_count": 500,
       "weekly_target": 19,
       "consistency_message": "일 2-3개 신규 리뷰 (최신성 유지, 지속)",
       "quality_standard": {
