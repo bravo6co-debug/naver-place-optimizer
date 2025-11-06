@@ -488,17 +488,17 @@ class StrategyPlannerService:
 
     def get_rank_target(self, level: int) -> tuple[str, str, float]:
         """
-        레벨별 목표 순위 및 타임라인
+        레벨별 목표 순위 및 타임라인 (Phase 정의와 일치)
 
         Returns:
             (목표 순위, 예상 기간, 트래픽 전환율)
         """
         targets = {
-            5: ("Top 1-3", "1-2주", 0.25),
-            4: ("Top 5", "1개월", 0.15),
-            3: ("Top 10", "2-3개월", 0.10),
-            2: ("Top 20", "6개월", 0.05),
-            1: ("노출 목표", "장기", 0.02)
+            5: ("Top 1-3", "1개월", 0.25),        # Phase 1: 롱테일 킬러
+            4: ("Top 5", "2개월", 0.15),          # Phase 2: 니치 공략
+            3: ("Top 10", "3개월", 0.10),         # Phase 3: 중위권 진입
+            2: ("Top 20", "6개월 이상", 0.05),    # Phase 4: 상위권 도전
+            1: ("노출 목표", "1년 이상", 0.02)     # Phase 5: 최상위
         }
 
-        return targets.get(level, ("Top 10", "2개월", 0.10))
+        return targets.get(level, ("Top 10", "3개월", 0.10))
