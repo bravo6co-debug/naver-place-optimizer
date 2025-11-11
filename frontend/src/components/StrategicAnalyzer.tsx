@@ -103,23 +103,23 @@ const INITIAL_ANALYSIS_STEPS: AnalysisStep[] = [
   {
     id: 1,
     name: '키워드 생성',
-    description: 'GPT-4로 전략적 키워드 생성 중',
+    description: 'GPT-4o로 고품질 키워드 생성 중',
     icon: '🤖',
     estimatedTime: 10,
     status: 'pending'
   },
   {
     id: 2,
-    name: '검색량 분석',
-    description: '네이버 검색광고 API로 실제 검색량 조회',
+    name: '메트릭 추정',
+    description: '키워드별 검색량 및 난이도 추정',
     icon: '📊',
     estimatedTime: 15,
     status: 'pending'
   },
   {
     id: 3,
-    name: '경쟁도 측정',
-    description: '35개 키워드 경쟁도 분석 중',
+    name: '경쟁도 분석',
+    description: '35개 키워드 난이도 분석 중',
     icon: '🎯',
     estimatedTime: 20,
     status: 'pending'
@@ -379,7 +379,7 @@ function StrategicAnalyzer() {
           </div>
 
           <div className="progress-footer">
-            <p>💡 AI가 35개의 전략적 키워드를 분석하고 있습니다</p>
+            <p>💡 GPT-4o가 35개의 고품질 키워드를 생성하고 있습니다</p>
             <p>⏱️ 예상 소요 시간: 약 50초</p>
           </div>
         </div>
